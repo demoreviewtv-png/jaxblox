@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>JaxBlox Engine - Flight & Respawn Framework</title>
+    <title>JaxBlox Engine - Flight, Water & Respawn Framework</title>
     <style>
         body {
             margin: 0; padding: 0; overflow: hidden;
@@ -103,7 +103,7 @@
     <div id="home-menu">
         <div id="home-card">
             <h1>JAXBLOX WORLD</h1>
-            <p>Roblox Simulation Engine with Studio Flight Controls</p>
+            <p>Roblox Simulation Engine with Liquid Buoyancy Physics</p>
             
             <input type="text" id="username-input" class="menu-input" placeholder="Enter Nickname..." maxlength="15">
             <div class="search-container">
@@ -119,6 +119,7 @@
     <div id="ui-container">
         <span id="room-indicator" style="color:#00e1ff; font-weight:bold; margin-right:10px; font-size:0.9rem; align-self:center;">ROOM: LOBBY</span>
         <span id="fps-view-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none;">FIRST PERSON</span>
+        <span id="water-status-indicator" style="color:#3399ff; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🌊 SWIMMING</span>
         <span id="fly-status-indicator" style="color:#00ff66; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">FLYING (F)</span>
         <button id="jumpout-seat-btn" class="dashboard-btn" style="background:#ff9500; display:none; margin-right:10px;" onclick="jumpOutSeat()">Jump Out (Space)</button>
         <button class="dashboard-btn" style="background:#cc2900;" onclick="exitToHubMenu()">Disconnect</button>
@@ -142,7 +143,7 @@
             <div class="asset-tray">
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('brick')">🧱 Brick</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('sphere')">🔮 Sphere</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('torus')">🍩 Donut</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('water')" style="border-color:#3399ff; color:#3399ff;">🌊 Water</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500;">💺 Seat</div>
             </div>
             <div style="margin-top:8px;">
@@ -230,12 +231,13 @@
         let gameInitialized = false;
         let isStudioMode = false;
         let isFlying = false;
+        let inWater = false;
         
         let globalRoomConfig = { playersCollide: false };
         let localData = { 
             id: playerId, username: "Guest",
             x: 0, y: 5, z: 0, rotY: 0, color: Math.random() * 0xffffff, room: 'lobby',
-            sittingOn: "", legSwing: 0, isMoving: false
+            sittingOn: "", legSwing: 0, isMoving: false, isSubmerged: false
         };
         
         let velocityY = 0;
@@ -280,7 +282,10 @@
             localData.sittingOn = "";
             velocityY = 0;
             isGrounded = false;
+            inWater = false;
+            localData.isSubmerged = false;
             document.getElementById('jumpout-seat-btn').style.display = 'none';
+            document.getElementById('water-status-indicator').style.display = 'none';
             if(playerRef) set(playerRef, localData);
         }
 
@@ -317,12 +322,12 @@
                 push(activeRoomBlocksRef, {
                     type: draggedAssetType,
                     x: Math.round(target.x), y: Math.round(localData.y), z: Math.round(target.z),
-                    sx: draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:1), 
-                    sy: draggedAssetType==='seat'?0.6:1, 
-                    sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:1),
+                    sx: draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:3), 
+                    sy: draggedAssetType==='seat'?0.6:2, 
+                    sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:3),
                     rx: 0, ry: 0, rz: 0,
-                    color: draggedAssetType==='seat'?"#ff9500":"#00e1ff", 
-                    canCollide: true,
+                    color: draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":"#00e1ff"), 
+                    canCollide: (draggedAssetType !== 'water'), // Water shouldn't collide solid by default
                     isSpawn: false,
                     meshData: base64MeshString || ""
                 });
@@ -521,15 +526,20 @@
                     geometry = new THREE.BoxGeometry(1, 1, 1);
                 }
 
-                let material = new THREE.MeshStandardMaterial({ color: colorHex });
-                if (b.canCollide === false) { material.transparent = true; material.opacity = 0.6; }
-                let mesh = new THREE.Mesh(geometry, material);
+                let material;
+                if (b.type === 'water') {
+                    material = new THREE.MeshStandardMaterial({ color: 0x3399ff, transparent: true, opacity: 0.6, roughness: 0.1 });
+                } else {
+                    material = new THREE.MeshStandardMaterial({ color: colorHex });
+                    if (b.canCollide === false) { material.transparent = true; material.opacity = 0.6; }
+                }
 
+                let mesh = new THREE.Mesh(geometry, material);
                 mesh.position.set(b.x, b.y, b.z);
                 mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
                 mesh.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
 
-                mesh.userData = { blockId: key, isSeat: (b.type === 'seat') };
+                mesh.userData = { blockId: key, isSeat: (b.type === 'seat'), isWater: (b.type === 'water') };
                 scene.add(mesh);
                 blockMap.set(key, mesh);
 
@@ -537,7 +547,8 @@
                     id: key, x: b.x, y: b.y, z: b.z,
                     w: b.sx || 1, h: b.sy || 1, d: b.sz || 1,
                     isSeat: (b.type === 'seat'),
-                    canCollide: (b.canCollide !== false)
+                    isWater: (b.type === 'water'),
+                    canCollide: b.type === 'water' ? false : (b.canCollide !== false)
                 });
             });
         }
@@ -681,7 +692,6 @@
             keys[e.key.toLowerCase()] = true;
             if(e.key === ' ' && localData.sittingOn) jumpOutSeat();
             
-            // F key shortcut triggers fly toggle
             if(e.key.toLowerCase() === 'f' && isStudioMode) {
                 toggleFlightMode(!isFlying);
             }
@@ -697,7 +707,7 @@
             requestAnimationFrame(animate);
 
             if (gameInitialized) {
-                let speed = isFlying ? 0.25 : 0.12;
+                let speed = isFlying ? 0.25 : (inWater ? 0.07 : 0.12);
                 let forwardX = Math.sin(cameraYaw), forwardZ = Math.cos(cameraYaw);
                 let rightX = Math.cos(cameraYaw), rightZ = -Math.sin(cameraYaw);
                 let moveX = 0, moveZ = 0;
@@ -734,12 +744,34 @@
 
                     let nextY = localData.y;
                     
-                    if (isFlying) {
-                        // Flying mechanics: Space ascends, Shift descends
+                    // Pre-check if player is inside any Water volumes
+                    let playerRadius = 0.4;
+                    let playerHeight = 2.0;
+                    let currentlyInWater = false;
+
+                    blockDataArray.forEach(b => {
+                        if (!b.isWater) return;
+                        let withinX = localData.x >= b.x - b.w/2 && localData.x <= b.x + b.w/2;
+                        let withinY = localData.y + 1.0 >= b.y - b.h/2 && localData.y <= b.y + b.h/2; // check torso line
+                        let withinZ = localData.z >= b.z - b.d/2 && localData.z <= b.z + b.d/2;
+                        if (withinX && withinY && withinZ) currentlyInWater = true;
+                    });
+                    
+                    inWater = currentlyInWater;
+                    localData.isSubmerged = inWater;
+                    document.getElementById('water-status-indicator').style.display = inWater ? 'block' : 'none';
+
+                    if (isFlying || inWater) {
                         isGrounded = false;
+                        velocityY = 0;
                         if (keys[' ']) nextY += speed;
                         if (keys['shift']) nextY -= speed;
                         
+                        // Apply fluid buoyancy damping if just drifting
+                        if (!keys[' '] && !keys['shift'] && inWater) {
+                            nextY -= 0.01; // slow natural sinking
+                        }
+
                         localData.x = nextX;
                         localData.z = nextZ;
                         localData.y = nextY;
@@ -749,14 +781,10 @@
                         velocityY -= 0.009; 
                         nextY += velocityY;
 
-                        // CRITICAL RESPAWN LAYER: Teleports player immediately back if out of limits
                         if (nextY < -25) {
                             respawnPlayer();
                             return; 
                         }
-
-                        let playerRadius = 0.4;
-                        let playerHeight = 2.0;
 
                         // X-Axis Collision
                         let xCollides = false;
@@ -819,7 +847,7 @@
                     }
                 }
 
-                localData.legSwing = (localData.isMoving && !isFlying) ? Math.sin(Date.now() * 0.014) * 0.65 : 0;
+                localData.legSwing = (localData.isMoving && !isFlying) ? (inWater ? Math.sin(Date.now() * 0.008) * 0.4 : Math.sin(Date.now() * 0.014) * 0.65) : 0;
                 if(playerRef) set(playerRef, localData);
             }
 
@@ -830,18 +858,28 @@
                 playerMeshes[playerId] = group; scene.add(group);
             }
             
-            function updateLimbAnimations(meshGroup, isMoving, swingAngle, isSitting) {
+            function updateLimbAnimations(meshGroup, isMoving, swingAngle, isSitting, isSubmerged) {
                 const leftLegPivot = meshGroup.getObjectByName("leftLegPivot");
                 const rightLegPivot = meshGroup.getObjectByName("rightLegPivot");
                 const leftArmPivot = meshGroup.getObjectByName("leftArmPivot");
                 const rightArmPivot = meshGroup.getObjectByName("rightArmPivot");
+                const torso = meshGroup.getObjectByName("torso");
 
                 if (isSitting) {
+                    if(torso) torso.rotation.x = 0;
                     if(leftLegPivot) leftLegPivot.rotation.set(-Math.PI / 2, 0, 0);
                     if(rightLegPivot) rightLegPivot.rotation.set(-Math.PI / 2, 0, 0);
                     if(leftArmPivot) leftArmPivot.rotation.set(-Math.PI / 5, 0, 0);
                     if(rightArmPivot) rightArmPivot.rotation.set(-Math.PI / 5, 0, 0);
+                } else if (isSubmerged) {
+                    // Tilted crawl animation style for swimming inside water
+                    if(torso) torso.rotation.x = Math.PI / 4;
+                    if(leftLegPivot) leftLegPivot.rotation.set(swingAngle, 0, 0);
+                    if(rightLegPivot) rightLegPivot.rotation.set(-swingAngle, 0, 0);
+                    if(leftArmPivot) leftArmPivot.rotation.set(Math.PI/2 + swingAngle, 0, 0);
+                    if(rightArmPivot) rightArmPivot.rotation.set(Math.PI/2 - swingAngle, 0, 0);
                 } else {
+                    if(torso) torso.rotation.x = 0;
                     if(leftLegPivot) leftLegPivot.rotation.set(swingAngle, 0, 0);
                     if(rightLegPivot) rightLegPivot.rotation.set(-swingAngle, 0, 0);
                     if(leftArmPivot) leftArmPivot.rotation.set(-swingAngle * 0.9, 0, 0);
@@ -852,7 +890,7 @@
             if (playerMeshes[playerId] && gameInitialized) {
                 playerMeshes[playerId].position.set(localData.x, localData.y, localData.z);
                 playerMeshes[playerId].rotation.y = localData.rotY;
-                updateLimbAnimations(playerMeshes[playerId], localData.isMoving, localData.legSwing, !!localData.sittingOn);
+                updateLimbAnimations(playerMeshes[playerId], localData.isMoving, localData.legSwing, !!localData.sittingOn, localData.isSubmerged);
 
                 const headNode = playerMeshes[playerId].getObjectByName("head");
                 const torsoNode = playerMeshes[playerId].getObjectByName("torso");
@@ -886,7 +924,7 @@
                 playerMeshes[id].position.y += (p.y - playerMeshes[id].position.y) * 0.3;
                 playerMeshes[id].position.z += (p.z - playerMeshes[id].position.z) * 0.3;
                 playerMeshes[id].rotation.y = p.rotY || 0;
-                updateLimbAnimations(playerMeshes[id], p.isMoving, p.legSwing || 0, !!p.sittingOn);
+                updateLimbAnimations(playerMeshes[id], p.isMoving, p.legSwing || 0, !!p.sittingOn, p.isSubmerged);
             });
 
             const trackingTarget = playerMeshes[playerId];
