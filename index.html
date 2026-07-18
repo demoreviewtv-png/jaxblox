@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>JaxBlox Engine - Full Collisions System</title>
+    <title>JaxBlox Engine - Flight & Respawn Framework</title>
     <style>
         body {
             margin: 0; padding: 0; overflow: hidden;
@@ -103,7 +103,7 @@
     <div id="home-menu">
         <div id="home-card">
             <h1>JAXBLOX WORLD</h1>
-            <p>Roblox Simulation Engine with Full Collisions Matrix</p>
+            <p>Roblox Simulation Engine with Studio Flight Controls</p>
             
             <input type="text" id="username-input" class="menu-input" placeholder="Enter Nickname..." maxlength="15">
             <div class="search-container">
@@ -119,6 +119,7 @@
     <div id="ui-container">
         <span id="room-indicator" style="color:#00e1ff; font-weight:bold; margin-right:10px; font-size:0.9rem; align-self:center;">ROOM: LOBBY</span>
         <span id="fps-view-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none;">FIRST PERSON</span>
+        <span id="fly-status-indicator" style="color:#00ff66; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">FLYING (F)</span>
         <button id="jumpout-seat-btn" class="dashboard-btn" style="background:#ff9500; display:none; margin-right:10px;" onclick="jumpOutSeat()">Jump Out (Space)</button>
         <button class="dashboard-btn" style="background:#cc2900;" onclick="exitToHubMenu()">Disconnect</button>
     </div>
@@ -129,6 +130,10 @@
             <div class="toggle-container">
                 <label style="font-weight:bold;">Players Collide</label>
                 <input type="checkbox" id="room-players-collide" onchange="updateRoomGlobalConfig()">
+            </div>
+            <div class="toggle-container" style="margin-top: 8px; border: 1px solid #00ff66;">
+                <label style="font-weight:bold; color:#00ff66;">Fly Mode (F)</label>
+                <input type="checkbox" id="studio-fly-toggle" onchange="toggleFlightMode(this.checked)">
             </div>
         </div>
 
@@ -224,6 +229,7 @@
 
         let gameInitialized = false;
         let isStudioMode = false;
+        let isFlying = false;
         
         let globalRoomConfig = { playersCollide: false };
         let localData = { 
@@ -273,8 +279,18 @@
             localData.z = spawnPoint.z;
             localData.sittingOn = "";
             velocityY = 0;
+            isGrounded = false;
             document.getElementById('jumpout-seat-btn').style.display = 'none';
+            if(playerRef) set(playerRef, localData);
         }
+
+        window.toggleFlightMode = function(state) {
+            if(!isStudioMode) return;
+            isFlying = state;
+            velocityY = 0;
+            document.getElementById('studio-fly-toggle').checked = state;
+            document.getElementById('fly-status-indicator').style.display = state ? 'block' : 'none';
+        };
 
         window.setDragAsset = function(type) { draggedAssetType = type; base64MeshString = ""; };
 
@@ -306,7 +322,7 @@
                     sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:1),
                     rx: 0, ry: 0, rz: 0,
                     color: draggedAssetType==='seat'?"#ff9500":"#00e1ff", 
-                    canCollide: true, // Default to true!
+                    canCollide: true,
                     isSpawn: false,
                     meshData: base64MeshString || ""
                 });
@@ -390,11 +406,11 @@
             localData.room = roomInput || 'lobby';
             
             isStudioMode = false;
+            toggleFlightMode(false);
             document.getElementById('studio-sidebar').style.display = 'none';
 
             const configRef = ref(db, `maps/${localData.room}/config`);
             
-            // Sync global layout room rules
             onValue(configRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.val();
@@ -459,6 +475,7 @@
             if(playerRef) set(playerRef, null);
             closeInspector();
             draggingBlockId = null;
+            toggleFlightMode(false);
             Object.keys(playerMeshes).forEach(id => scene.remove(playerMeshes[id]));
             playerMeshes = {};
             rebuildCustomMaps(); 
@@ -660,17 +677,27 @@
         }
 
         window.addEventListener('keydown', e => {
+            if(document.activeElement.tagName === 'INPUT') return;
             keys[e.key.toLowerCase()] = true;
             if(e.key === ' ' && localData.sittingOn) jumpOutSeat();
+            
+            // F key shortcut triggers fly toggle
+            if(e.key.toLowerCase() === 'f' && isStudioMode) {
+                toggleFlightMode(!isFlying);
+            }
         });
-        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+        window.addEventListener('keyup', e => {
+            if(document.activeElement.tagName === 'INPUT') return;
+            keys[e.key.toLowerCase()] = false;
+        });
+        
         onValue(ref(db, 'players'), snap => { if(gameInitialized) remotePlayers = snap.val() || {}; });
 
         function animate() {
             requestAnimationFrame(animate);
 
             if (gameInitialized) {
-                let speed = 0.12;
+                let speed = isFlying ? 0.25 : 0.12;
                 let forwardX = Math.sin(cameraYaw), forwardZ = Math.cos(cameraYaw);
                 let rightX = Math.cos(cameraYaw), rightZ = -Math.sin(cameraYaw);
                 let moveX = 0, moveZ = 0;
@@ -705,78 +732,94 @@
                         if(isFirstPerson) localData.rotY = cameraYaw + Math.PI;
                     }
 
-                    if (keys[' '] && isGrounded) { velocityY = 0.2; isGrounded = false; }
-                    velocityY -= 0.009; 
-                    let nextY = localData.y + velocityY;
+                    let nextY = localData.y;
+                    
+                    if (isFlying) {
+                        // Flying mechanics: Space ascends, Shift descends
+                        isGrounded = false;
+                        if (keys[' ']) nextY += speed;
+                        if (keys['shift']) nextY -= speed;
+                        
+                        localData.x = nextX;
+                        localData.z = nextZ;
+                        localData.y = nextY;
+                    } else {
+                        // Standard physical gravity calculation
+                        if (keys[' '] && isGrounded) { velocityY = 0.2; isGrounded = false; }
+                        velocityY -= 0.009; 
+                        nextY += velocityY;
 
-                    if (nextY < -25) respawnPlayer();
+                        // CRITICAL RESPAWN LAYER: Teleports player immediately back if out of limits
+                        if (nextY < -25) {
+                            respawnPlayer();
+                            return; 
+                        }
 
-                    // --- ADVANCED ROBLOX AXIS-ALIGNED COLLISION MATRIX SYSTEM ---
-                    let playerRadius = 0.4;
-                    let playerHeight = 2.0;
+                        let playerRadius = 0.4;
+                        let playerHeight = 2.0;
 
-                    // X-Axis Resolution Loop
-                    let xCollides = false;
-                    blockDataArray.forEach(b => {
-                        if (!b.canCollide) return;
-                        let withinX = nextX + playerRadius >= b.x - b.w/2 && nextX - playerRadius <= b.x + b.w/2;
-                        let withinY = localData.y + playerHeight >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
-                        let withinZ = localData.z + playerRadius >= b.z - b.d/2 && localData.z - playerRadius <= b.z + b.d/2;
-                        if (withinX && withinY && withinZ) { xCollides = true; }
-                    });
-                    if (!xCollides) localData.x = nextX;
-
-                    // Z-Axis Resolution Loop
-                    let zCollides = false;
-                    blockDataArray.forEach(b => {
-                        if (!b.canCollide) return;
-                        let withinX = localData.x + playerRadius >= b.x - b.w/2 && localData.x - playerRadius <= b.x + b.w/2;
-                        let withinY = localData.y + playerHeight >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
-                        let withinZ = nextZ + playerRadius >= b.z - b.d/2 && nextZ - playerRadius <= b.z + b.d/2;
-                        if (withinX && withinY && withinZ) { zCollides = true; }
-                    });
-                    if (!zCollides) localData.z = nextZ;
-
-                    // --- MUTUAL INTER-PLAYER COLLISIONS ---
-                    if (globalRoomConfig.playersCollide) {
-                        Object.keys(remotePlayers).forEach(id => {
-                            if (id === playerId || remotePlayers[id].room !== localData.room) return;
-                            let rp = remotePlayers[id];
-                            let dx = localData.x - rp.x;
-                            let dz = localData.z - rp.z;
-                            let dist = Math.sqrt(dx*dx + dz*dz);
-                            let minDist = playerRadius * 2;
-                            if (dist < minDist && dist > 0.01) {
-                                // Dynamic positional correction pushback
-                                let overlap = minDist - dist;
-                                localData.x += (dx / dist) * overlap * 0.5;
-                                localData.z += (dz / dist) * overlap * 0.5;
-                            }
+                        // X-Axis Collision
+                        let xCollides = false;
+                        blockDataArray.forEach(b => {
+                            if (!b.canCollide) return;
+                            let withinX = nextX + playerRadius >= b.x - b.w/2 && nextX - playerRadius <= b.x + b.w/2;
+                            let withinY = localData.y + playerHeight >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
+                            let withinZ = localData.z + playerRadius >= b.z - b.d/2 && localData.z - playerRadius <= b.z + b.d/2;
+                            if (withinX && withinY && withinZ) { xCollides = true; }
                         });
-                    }
+                        if (!xCollides) localData.x = nextX;
 
-                    // Y-Axis Floor Resolution Loop
-                    let groundHit = false;
-                    blockDataArray.forEach(b => {
-                        let withinX = localData.x + playerRadius >= b.x - b.w/2 && localData.x - playerRadius <= b.x + b.w/2;
-                        let withinZ = localData.z + playerRadius >= b.z - b.d/2 && localData.z - playerRadius <= b.z + b.d/2;
-                        if (withinX && withinZ) {
-                            let surfaceTop = b.y + b.h/2;
-                            if (velocityY <= 0 && nextY >= surfaceTop - 0.4 && nextY <= surfaceTop + 0.15) {
-                                if (b.isSeat && !localData.sittingOn) {
-                                    localData.sittingOn = b.id;
-                                } else if (b.canCollide) {
-                                    nextY = surfaceTop; velocityY = 0; isGrounded = true; groundHit = true;
+                        // Z-Axis Collision
+                        let zCollides = false;
+                        blockDataArray.forEach(b => {
+                            if (!b.canCollide) return;
+                            let withinX = localData.x + playerRadius >= b.x - b.w/2 && localData.x - playerRadius <= b.x + b.w/2;
+                            let withinY = localData.y + playerHeight >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
+                            let withinZ = nextZ + playerRadius >= b.z - b.d/2 && nextZ - playerRadius <= b.z + b.d/2;
+                            if (withinX && withinY && withinZ) { zCollides = true; }
+                        });
+                        if (!zCollides) localData.z = nextZ;
+
+                        // Mutual Player Pushback Collision Matrix
+                        if (globalRoomConfig.playersCollide) {
+                            Object.keys(remotePlayers).forEach(id => {
+                                if (id === playerId || remotePlayers[id].room !== localData.room) return;
+                                let rp = remotePlayers[id];
+                                let dx = localData.x - rp.x;
+                                let dz = localData.z - rp.z;
+                                let dist = Math.sqrt(dx*dx + dz*dz);
+                                let minDist = playerRadius * 2;
+                                if (dist < minDist && dist > 0.01) {
+                                    let overlap = minDist - dist;
+                                    localData.x += (dx / dist) * overlap * 0.5;
+                                    localData.z += (dz / dist) * overlap * 0.5;
+                                }
+                            });
+                        }
+
+                        // Y-Axis Floor Snap resolution loop
+                        let groundHit = false;
+                        blockDataArray.forEach(b => {
+                            let withinX = localData.x + playerRadius >= b.x - b.w/2 && localData.x - playerRadius <= b.x + b.w/2;
+                            let withinZ = localData.z + playerRadius >= b.z - b.d/2 && localData.z - playerRadius <= b.z + b.d/2;
+                            if (withinX && withinZ) {
+                                let surfaceTop = b.y + b.h/2;
+                                if (velocityY <= 0 && nextY >= surfaceTop - 0.4 && nextY <= surfaceTop + 0.15) {
+                                    if (b.isSeat && !localData.sittingOn) {
+                                        localData.sittingOn = b.id;
+                                    } else if (b.canCollide) {
+                                        nextY = surfaceTop; velocityY = 0; isGrounded = true; groundHit = true;
+                                    }
                                 }
                             }
-                        }
-                    });
+                        });
 
-                    if (!groundHit && !localData.sittingOn) isGrounded = false;
-                    if (!groundHit) localData.y = nextY;
+                        if (!groundHit && !localData.sittingOn) isGrounded = false;
+                        if (!groundHit) localData.y = nextY;
+                    }
                 }
 
-                localData.legSwing = localData.isMoving ? Math.sin(Date.now() * 0.014) * 0.65 : 0;
+                localData.legSwing = (localData.isMoving && !isFlying) ? Math.sin(Date.now() * 0.014) * 0.65 : 0;
                 if(playerRef) set(playerRef, localData);
             }
 
