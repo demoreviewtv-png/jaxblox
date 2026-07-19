@@ -209,6 +209,7 @@
         <span id="water-status-indicator" style="color:#3399ff; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🌊 SWIMMING</span>
         <span id="climb-status-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🧗 CLIMBING</span>
         <span id="fly-status-indicator" style="color:#00ff66; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">FLYING (F)</span>
+        <button id="mute-audio-btn" class="dashboard-btn" style="background:#4a4a4a; color:#00ff66; margin-right:10px;" onclick="toggleAudioMute()">🔊 Audio Active</button>
         <button id="jumpout-seat-btn" class="dashboard-btn" style="background:#ff9500; display:none; margin-right:10px;" onclick="jumpOutSeat()">Jump Out (Space)</button>
         <button class="dashboard-btn" style="background:#cc2900;" onclick="exitToHubMenu()">Disconnect</button>
     </div>
@@ -242,6 +243,10 @@
             <div class="toggle-container" style="margin-top: 8px; border: 1px solid #00ff66;">
                 <label style="font-weight:bold; color:#00ff66;">Fly Mode (F)</label>
                 <input type="checkbox" id="studio-fly-toggle" onchange="toggleFlightMode(this.checked)">
+            </div>
+            <div style="margin-top:12px; border-top: 1px solid #333; padding-top:10px;">
+                <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px; font-weight:bold;">🎵 Room Background Music:</label>
+                <input type="file" id="bgm-uploader" accept="audio/*" style="font-size:11px; width:100%;">
             </div>
         </div>
 
@@ -386,6 +391,11 @@
         let draggedAssetType = "";
         let base64MeshString = ""; 
 
+        // Background Music Systems
+        const bgAudioElement = new Audio();
+        bgAudioElement.loop = true;
+        let audioMuted = false;
+
         let remotePlayers = {};
         let currentRoomBlocks = {};
         let selectedBlockId = null, draggingBlockId = null;
@@ -465,6 +475,35 @@
             if(!isStudioMode) return;
             draggedAssetType = type; 
             base64MeshString = ""; 
+        };
+
+        // Custom Background Music Uploader Action
+        document.getElementById('bgm-uploader').addEventListener('change', function(e) {
+            if(!isStudioMode) return;
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const base64Audio = evt.target.result;
+                set(ref(db, `maps/${localData.room}/config/audioTrack`), base64Audio);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        window.toggleAudioMute = function() {
+            audioMuted = !audioMuted;
+            bgAudioElement.muted = audioMuted;
+            const btn = document.getElementById('mute-audio-btn');
+            if(audioMuted) {
+                btn.innerText = "🔇 Muted";
+                btn.style.color = "#ff3b30";
+            } else {
+                btn.innerText = "🔊 Audio Active";
+                btn.style.color = "#00ff66";
+                if(bgAudioElement.paused && bgAudioElement.src) {
+                    bgAudioElement.play().catch(e => console.log("Playback resume block prevented: ", e));
+                }
+            }
         };
 
         document.getElementById('glb-uploader').addEventListener('change', function(e) {
@@ -630,6 +669,17 @@
                     const data = snapshot.val();
                     globalRoomConfig.playersCollide = !!data.playersCollide;
                     document.getElementById('room-players-collide').checked = globalRoomConfig.playersCollide;
+                    
+                    // Audio track sync setup
+                    if (data.audioTrack && bgAudioElement.src !== data.audioTrack) {
+                        bgAudioElement.src = data.audioTrack;
+                        if (!audioMuted) {
+                            bgAudioElement.play().catch(e => console.log("Audio activation requires interacting with the window document first: ", e));
+                        }
+                    } else if (!data.audioTrack) {
+                        bgAudioElement.removeAttribute('src');
+                        bgAudioElement.load();
+                    }
                 }
             });
 
@@ -658,6 +708,10 @@
                 } else {
                     document.getElementById('lock-indicator').style.display = 'inline';
                     requestPointerLock();
+                }
+                // Fallback catch to fire loaded music instances after viewport launch gestures
+                if(bgAudioElement.src && !audioMuted && bgAudioElement.paused) {
+                    bgAudioElement.play().catch(() => {});
                 }
             }, 500);
 
@@ -734,6 +788,8 @@
 
         window.exitToHubMenu = function() {
             gameInitialized = false;
+            bgAudioElement.removeAttribute('src');
+            bgAudioElement.load();
             if(document.pointerLockElement === renderer.domElement) document.exitPointerLock();
             if(playerRef) set(playerRef, null);
             closeInspector();
@@ -937,6 +993,10 @@
             }
             if (e.button === 2) isRightMouseDown = true; 
             if (e.button === 0) isLeftMouseDown = true;
+            // Native fallback gesture rule handler to bypass browser audio rules inside initialization
+            if (gameInitialized && bgAudioElement.src && !audioMuted && bgAudioElement.paused) {
+                bgAudioElement.play().catch(() => {});
+            }
         });
 
         window.addEventListener('mouseup', e => { 
@@ -996,6 +1056,11 @@
             
             if (isStudioMode && touch.clientX > window.innerWidth - 300) return;
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            // Mobile context trigger handling to load audio
+            if (bgAudioElement.src && !audioMuted && bgAudioElement.paused) {
+                bgAudioElement.play().catch(() => {});
+            }
 
             const mouse = new THREE.Vector2((touch.clientX/window.innerWidth)*2-1, -(touch.clientY/window.innerHeight)*2+1);
             const raycaster = new THREE.Raycaster();
@@ -1122,7 +1187,6 @@
 
             const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.5), mat); torso.position.y = 1.6; torso.name = "torso"; group.add(torso);
             
-            // Clean untextured head setup
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat); 
             head.position.y = 2.45; head.name = "head"; group.add(head);
 
