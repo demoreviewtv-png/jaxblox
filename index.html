@@ -391,26 +391,6 @@
         let selectedBlockId = null, draggingBlockId = null;
         const keys = {};
 
-        // Generate Character Face Decal Canvas Correctly
-        let faceTextureCache = null;
-        function generateFaceTexture() {
-            if (faceTextureCache) return faceTextureCache;
-            const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            
-            ctx.fillStyle = "#ffcc99"; ctx.fillRect(0, 0, 128, 128); 
-            ctx.fillStyle = "#111111";
-            ctx.fillRect(30, 40, 16, 24); // Left Eye
-            ctx.fillRect(82, 40, 16, 24); // Right Eye
-
-            ctx.strokeStyle = "#111111"; ctx.lineWidth = 6; ctx.lineCap = "round";
-            ctx.beginPath(); ctx.arc(64, 72, 22, 0, Math.PI, false); ctx.stroke(); 
-
-            faceTextureCache = new THREE.CanvasTexture(canvas);
-            return faceTextureCache;
-        }
-
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x1a222d);
         
@@ -615,18 +595,15 @@
         };
 
         function calculateRoomMetrics() {
-            // Count total blocks/shapes in active room
             const totalShapes = Object.keys(currentRoomBlocks).length;
             document.getElementById('stat-shapes-count').innerText = totalShapes;
 
-            // Count total players in current specific active room
             let currentRoomPlayers = 0;
             Object.keys(remotePlayers).forEach(id => {
                 if (remotePlayers[id] && remotePlayers[id].room === localData.room) {
                     currentRoomPlayers++;
                 }
             });
-            // Factor local engine player into active counts
             if(gameInitialized) {
                 if(currentRoomPlayers === 0) currentRoomPlayers = 1;
             }
@@ -842,7 +819,6 @@
             return group;
         }
 
-        // Generates 3D floating text canvas box mesh elements dynamically
         function createObjectTextLabel(textString) {
             const canvas = document.createElement('canvas'); 
             canvas.width = 512; canvas.height = 128;
@@ -906,7 +882,6 @@
                 mesh.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
                 blockWrapperGroup.add(mesh);
 
-                // Check and bind text labels into active spatial view hierarchy 
                 if (b.textLabel && b.textLabel.trim().length > 0) {
                     const boundingHeightHeight = (b.sy || 1) / 2 + 0.95;
                     const textLabelSprite = createObjectTextLabel(b.textLabel.trim());
@@ -1026,7 +1001,6 @@
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, camera);
 
-            // Correctly evaluate child mesh lookups within structural layout maps
             const intersectables = [];
             blockMap.forEach(group => { group.traverse(child => { if(child.isMesh) intersectables.push(child); }); });
 
@@ -1148,18 +1122,8 @@
 
             const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.5), mat); torso.position.y = 1.6; torso.name = "torso"; group.add(torso);
             
-            const faceDecalMaterial = new THREE.MeshStandardMaterial({ map: generateFaceTexture() });
-            
-            const headMaterials = [
-                skinMat,            
-                skinMat,            
-                skinMat,            
-                skinMat,            
-                faceDecalMaterial,  
-                skinMat             
-            ];
-            
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), headMaterials); 
+            // Clean untextured head setup
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat); 
             head.position.y = 2.45; head.name = "head"; group.add(head);
 
             const leftArmPivot = new THREE.Group(); leftArmPivot.position.set(-0.7, 2.1, 0); leftArmPivot.name = "leftArmPivot";
