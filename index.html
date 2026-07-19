@@ -3,161 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>JaxBlox Engine - Secure Sandbox & Scripting Layer</title>
+    <title>Roblox Sandbox Simulator Engine</title>
     <style>
         body {
             margin: 0; padding: 0; overflow: hidden;
-            background: #111; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #191B1D; font-family: 'Segoe UI', Arial, sans-serif;
             user-select: none; -webkit-user-select: none; touch-action: none;
         }
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-        ::-webkit-scrollbar-thumb { background: #00e1ff; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #fff; border-radius: 2px; }
 
-        /* Home Launcher Panels */
+        /* Roblox Client Home Panel Layout */
         #home-menu {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: radial-gradient(circle, #2c3e50, #0f171e); z-index: 100;
+            background: #191B1D; z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white; transition: opacity 0.5s ease;
+            color: white; transition: opacity 0.3s ease;
         }
         #home-card {
-            background: rgba(0, 0, 0, 0.85); padding: 30px; border-radius: 20px;
-            border: 2px solid #00e1ff; text-align: center;
-            box-shadow: 0 0 30px rgba(0, 225, 255, 0.3); max-width: 500px; width: 90%;
-            position: relative;
+            background: #232527; padding: 35px; border-radius: 8px;
+            text-align: center; max-width: 440px; width: 90%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         #home-card h1 {
-            font-size: 2.5rem; margin: 0 0 5px 0; color: #00e1ff;
-            text-shadow: 0 0 10px rgba(0, 225, 255, 0.5);
+            font-size: 2.2rem; margin: 0 0 15px 0; color: #FFFFFF;
+            font-weight: 700; letter-spacing: 1px;
         }
         input.menu-input {
-            width: 85%; padding: 10px 15px; border-radius: 20px; border: 2px solid #444;
-            background: #222; color: white; font-size: 1rem; text-align: center;
-            outline: none; margin-bottom: 15px; transition: border-color 0.3s;
+            width: 88%; padding: 12px 14px; border-radius: 4px; border: 1px solid #3b3d3f;
+            background: #111214; color: white; font-size: 0.95rem; text-align: left;
+            outline: none; margin-bottom: 12px;
         }
-        input.menu-input:focus { border-color: #00e1ff; }
+        input.menu-input:focus { border-color: #00A2FF; }
         .search-container {
-            display: flex; flex-direction: column; gap: 8px;
-            background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; margin-bottom: 15px;
+            display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;
         }
         #play-btn {
-            background: #00e1ff; color: #111; padding: 12px 50px; font-size: 1.2rem;
-            font-weight: bold; border: none; border-radius: 25px; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 225, 255, 0.4); margin-top: 10px;
+            background: #00E266; color: white; width: 95%; padding: 14px 0; font-size: 1.2rem;
+            font-weight: bold; border: none; border-radius: 4px; cursor: pointer;
+            transition: background 0.2s; margin-top: 10px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         }
-        #play-btn:hover { background: #00bcd4; }
+        #play-btn:hover { background: #00C855; }
         
         .help-menu-btn {
-            background: #2a2a2a; color: #00ff66; border: 1px solid #00ff66;
-            padding: 8px 16px; border-radius: 15px; font-weight: bold; cursor: pointer;
-            margin-top: 12px; display: inline-block; font-size: 0.85rem;
+            background: transparent; color: #00A2FF; border: none;
+            padding: 8px; font-weight: bold; cursor: pointer;
+            margin-top: 12px; display: inline-block; font-size: 0.9rem;
         }
-        .help-menu-btn:hover { background: rgba(0, 255, 102, 0.1); }
+        .help-menu-btn:hover { text-decoration: underline; }
 
         /* Guide Modal Overlay */
         #guide-modal {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.85); z-index: 200; display: none;
+            background: rgba(0,0,0,0.7); z-index: 200; display: none;
             align-items: center; justify-content: center;
         }
         #guide-content {
-            background: #1e1e1e; border: 2px solid #00ff66; width: 85%; max-width: 550px;
-            padding: 25px; border-radius: 15px; color: #ddd; max-height: 75vh; overflow-y: auto;
-            text-align: left; box-shadow: 0 0 25px rgba(0,255,102,0.2);
+            background: #232527; width: 85%; max-width: 500px;
+            padding: 25px; border-radius: 6px; color: #fff; max-height: 75vh; overflow-y: auto;
         }
-        #guide-content h2 { color: #00ff66; margin-top: 0; border-bottom: 1px dashed #444; padding-bottom: 8px; }
-        #guide-content code { background: #111; color: #ffcc00; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-        #guide-content pre { background: #111; color: #00ff66; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.8rem; border: 1px solid #333; }
+        #guide-content h2 { color: #fff; margin-top: 0; border-bottom: 1px solid #3b3d3f; padding-bottom: 8px; }
+        #guide-content code { background: #111; color: #ffcd3a; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        #guide-content pre { background: #111; color: #00E266; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 0.8rem; }
 
-        /* Gameplay HUD Controls */
-        #ui-container {
-            position: absolute; top: 10px; left: 10px; z-index: 10;
-            display: none; gap: 10px; background: rgba(0,0,0,0.8);
-            padding: 10px 15px; border-radius: 12px; border: 1px solid #333;
+        /* Roblox Authentic TopBar Layer */
+        #topbar-container {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 50px;
+            z-index: 10; display: none; justify-content: space-between; align-items: center;
+            box-sizing: border-box; padding: 0 15px; pointer-events: none;
         }
-        .dashboard-btn {
-            padding: 8px 14px; border: none; border-radius: 6px;
-            font-weight: bold; color: white; cursor: pointer; background: #3a3a3a;
+        .topbar-left, .topbar-right { display: flex; gap: 8px; pointer-events: auto; }
+        
+        .topbar-icon-btn {
+            width: 36px; height: 36px; background: rgba(0, 0, 0, 0.5); border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            border: none; color: white; font-weight: bold; font-size: 1.1rem;
         }
-        .dashboard-btn:hover { background: #4a4a4a; }
+        .topbar-icon-btn:hover { background: rgba(50, 50, 50, 0.6); }
 
-        /* Pointer Lock Status Bar */
-        #lock-indicator {
-            color: #aaaaaa; font-size: 0.8rem; align-self: center; margin-right: 10px;
+        /* Roblox Leaderboard/PlayerList Overlay (Top Right) */
+        #roblox-leaderboard {
+            position: absolute; top: 55px; right: 15px; z-index: 10;
+            display: none; flex-direction: column; background: rgba(0, 0, 0, 0.5);
+            border-radius: 4px; color: #fff; width: 200px; padding: 4px;
+            font-size: 0.85rem; max-height: 300px; overflow-y: auto;
         }
+        .leaderboard-header { font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2); padding: 4px 6px; color: #ccc; text-transform: uppercase; font-size: 0.75rem; }
+        .leaderboard-row { display: flex; justify-content: space-between; padding: 5px 6px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .leaderboard-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
+        .leaderboard-stat { font-weight: bold; color: #00ffaa; }
 
-        /* Room Data Stats Overlay */
-        #room-stats-panel {
-            position: absolute; top: 10px; right: 10px; z-index: 10;
-            display: none; flex-direction: column; background: rgba(0, 0, 0, 0.8);
-            padding: 12px 16px; border-radius: 12px; border: 1px solid #00e1ff;
-            color: #fff; width: 180px; box-shadow: 0 0 15px rgba(0, 225, 255, 0.2);
-        }
-        .stat-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 0.85rem; }
-        .stat-val { font-weight: bold; color: #ffcc00; }
-
-        /* Game Chat Overlay Box UI */
+        /* Roblox Chat UI Box Overlay (Top Left Positioned) */
         #chat-window {
-            position: absolute; bottom: 20px; left: 20px; width: 320px; height: 240px;
-            background: rgba(0, 0, 0, 0.7); border: 1px solid #444; border-radius: 10px;
-            display: none; flex-direction: column; z-index: 15; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            position: absolute; top: 55px; left: 15px; width: 340px; height: 200px;
+            background: rgba(0, 0, 0, 0.35); border-radius: 4px;
+            display: none; flex-direction: column; z-index: 15;
         }
         #chat-logs {
-            flex: 1; padding: 10px; overflow-y: auto; color: #fff; font-size: 0.85rem;
-            display: flex; flex-direction: column; gap: 4px; font-family: sans-serif;
+            flex: 1; padding: 8px; overflow-y: auto; color: #fff; font-size: 0.88rem;
+            display: flex; flex-direction: column; gap: 3px; font-family: 'Segoe UI', Arial, sans-serif;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
         }
-        .chat-msg { line-height: 1.3; word-break: break-all; }
-        .chat-tag { color: #00e1ff; font-weight: bold; }
-        #chat-form { display: flex; border-top: 1px solid #444; background: #111; border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
+        .chat-msg { line-height: 1.25; word-break: break-all; }
+        .chat-tag { color: #ffca3a; font-weight: bold; margin-right: 4px; }
+        #chat-form { display: flex; background: rgba(0,0,0,0.5); border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
         #chat-input {
-            flex: 1; background: transparent; border: none; padding: 8px 12px;
+            flex: 1; background: transparent; border: none; padding: 8px 10px;
             color: #fff; font-size: 0.85rem; outline: none;
         }
 
-        /* Studio Editor Sidebar Layouts */
-        #studio-sidebar {
-            position: absolute; right: 0; top: 0; width: 320px; height: 100vh;
-            background: #1e1e1e; border-left: 2px solid #333; z-index: 20;
-            color: #ddd; display: none; flex-direction: column;
-            box-shadow: -5px 0 15px rgba(0,0,0,0.5); font-size: 0.85rem;
+        /* Status Hud Indicators */
+        #status-hud-container {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 12; display: flex; gap: 8px; pointer-events: none;
         }
-        .sidebar-section { border-bottom: 1px solid #333; padding: 12px; }
-        .sidebar-title { color: #00e1ff; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-pill {
+            background: rgba(0,0,0,0.6); padding: 6px 12px; border-radius: 20px;
+            color: white; font-weight: bold; font-size: 0.8rem; display: none;
+        }
+
+        /* Roblox Studio Sidebar Config UI */
+        #studio-sidebar {
+            position: absolute; right: 0; top: 0; width: 300px; height: 100vh;
+            background: #2d2d30; border-left: 1px solid #3f3f46; z-index: 20;
+            color: #f1f1f1; display: none; flex-direction: column; font-size: 0.85rem;
+        }
+        .sidebar-section { border-bottom: 1px solid #3f3f46; padding: 12px; }
+        .sidebar-title { color: #00A2FF; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; }
         
-        .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 5px; max-height: 220px; overflow-y: auto; padding-right: 2px; }
+        .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-height: 200px; overflow-y: auto; }
         .tray-item {
-            background: #2a2a2a; border: 1px dashed #555; border-radius: 6px;
-            padding: 8px; text-align: center; cursor: grab; color: #fff; font-weight: bold; font-size: 0.75rem;
+            background: #3e3e42; border: 1px solid #555; border-radius: 3px;
+            padding: 8px; text-align: center; cursor: grab; color: #fff; font-weight: 500; font-size: 0.8rem;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .tray-item:active { cursor: grabbing; background: #333; }
+        .tray-item:hover { background: #505056; }
         
         .prop-grid { display: grid; grid-template-columns: 50px 1fr; gap: 8px; align-items: center; margin-bottom: 5px; }
-        .prop-grid label { color: #aaa; font-weight: bold; }
+        .prop-grid label { color: #969696; }
         .prop-inputs { display: flex; gap: 4px; }
         .prop-inputs input {
-            width: 100%; background: #2b2b2b; border: 1px solid #444; border-radius: 4px;
+            width: 100%; background: #1e1e1e; border: 1px solid #3f3f46; border-radius: 2px;
             color: #fff; padding: 4px; text-align: center; font-size: 0.8rem;
         }
         
         .toggle-container {
             display: flex; justify-content: space-between; align-items: center; 
-            background: #2a2a2a; padding: 8px; border-radius: 6px; margin-top: 5px;
+            background: #1e1e1e; padding: 6px 8px; border-radius: 2px; margin-top: 4px;
         }
-
         .code-editor-box {
-            width: 93%; height: 90px; background: #111; color: #00ff66;
-            font-family: monospace; font-size: 11px; border: 1px solid #444;
-            border-radius: 6px; padding: 6px; resize: none; margin-top: 5px; outline: none;
+            width: 93%; height: 80px; background: #1e1e1e; color: #f1f1f1;
+            font-family: monospace; font-size: 11px; border: 1px solid #3f3f46;
+            border-radius: 3px; padding: 6px; resize: none; margin-top: 5px; outline: none;
         }
-
-        /* Interactive Rig Panel sliders styling */
         .rig-slider-group {
-            background: #252525; padding: 8px; border-radius: 6px; margin-top: 4px; border: 1px solid #444;
+            background: #1e1e1e; padding: 6px; border-radius: 2px; margin-top: 4px;
         }
-        .rig-slider-group label { display: block; font-size: 11px; color: #00e1ff; margin-bottom: 2px; font-weight: bold; }
+        .rig-slider-group label { display: block; font-size: 11px; color: #aaa; margin-bottom: 2px; }
         .rig-slider-group input { width: 100%; }
+
+        .action-btn {
+            background: #00A2FF; color: white; padding: 8px; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;
+        }
+        .action-btn:hover { background: #007acc; }
     </style>
     <script type="importmap">
         {
@@ -172,122 +181,108 @@
 
     <div id="home-menu">
         <div id="home-card">
-            <h1>JAXBLOX WORLD</h1>
-            <p>Secure Simulation Engine Sandbox Matrix with Protected Admin Layer</p>
+            <h1>JaxBlox Sandbox</h1>
+            <p style="color:#aaa; font-size:0.9rem; margin-top:-10px; margin-bottom:20px;">Experience Sandbox World Simulation</p>
             
-            <input type="text" id="username-input" class="menu-input" placeholder="Enter Nickname..." maxlength="15">
+            <input type="text" id="username-input" class="menu-input" placeholder="Username" maxlength="15">
             <div class="search-container">
-                <input type="text" id="search-room-input" class="menu-input" style="width:90%; margin-bottom:0;" placeholder="Room Code (lobby, obby)">
+                <input type="text" id="search-room-input" class="menu-input" style="width:100%;" placeholder="Place / Room Code (lobby, obby)">
             </div>
-            <div class="search-container" style="background: rgba(255, 0, 85, 0.05); border: 1px dashed rgba(255, 0, 85, 0.3);">
-                <input type="password" id="admin-pass-input" class="menu-input" style="width:90%; margin-bottom:0;" placeholder="Editor Password (Leave blank for player mode)">
+            <div class="search-container">
+                <input type="password" id="admin-pass-input" class="menu-input" style="width:100%;" placeholder="Studio Access Password (Optional)">
             </div>
-            <button id="play-btn" onclick="enterGame()">LAUNCH WORLD</button>
+            <button id="play-btn" onclick="enterGame()">Play</button>
             <br>
-            <button class="help-menu-btn" onclick="toggleGuideModal(true)">📖 SCRIPTING GUIDE</button>
+            <button class="help-menu-btn" onclick="toggleGuideModal(true)">Scripting Docs</button>
         </div>
     </div>
 
     <div id="guide-modal">
         <div id="guide-content">
-            <h2>JaxBlox Scripting Guide</h2>
-            <p>Objects process custom JavaScript hooks automatically upon player contact. Code blocks must implement an <code>onTouch(player)</code> structure.</p>
-            
-            <h3 style="color:#00e1ff; margin-bottom:4px;">Available API Handlers:</h3>
+            <h2>Part Scripting Guide</h2>
+            <p>Implement custom actions safely within parts by executing <code>onTouch(player)</code> context loops.</p>
+            <h3>Global API:</h3>
             <ul>
-                <li><code>player.respawn()</code> — Resets targeted character instantly to spawn location or active checkpoint.</li>
-                <li><code>player.teleport(x, y, z)</code> — Warps player coordinates instantly to specified vectors.</li>
-                <li><code>player.setCheckpoint(x, y, z)</code> — Dynamically overrides active spawn/respawn point configurations.</li>
+                <li><code>player.respawn()</code> - Resets the character instantly.</li>
+                <li><code>player.teleport(x, y, z)</code> - Teleports player coordinates.</li>
+                <li><code>player.setCheckpoint(x, y, z)</code> - Overrides character active spawn vector.</li>
             </ul>
-
-            <h3 style="color:#00e1ff; margin-bottom:4px;">Example Checkpoint Script:</h3>
-            <pre>function onTouch(player) {
-  // Sets checkpoint to this exact block position
-  player.setCheckpoint(0, 5, 10);
-}</pre>
-            
-            <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:15px;" onclick="toggleGuideModal(false)">Close Guide Window</button>
+            <button class="action-btn" style="background:#ff3b30; width:100%; margin-top:15px;" onclick="toggleGuideModal(false)">Close Docs</button>
         </div>
     </div>
 
-    <div id="ui-container">
-        <span id="room-indicator" style="color:#00e1ff; font-weight:bold; margin-right:10px; font-size:0.9rem; align-self:center;">ROOM: LOBBY</span>
-        <span id="lock-indicator">Click screen to lock mouse</span>
-        <span id="fps-view-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none;">FIRST PERSON</span>
-        <span id="water-status-indicator" style="color:#3399ff; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🌊 SWIMMING</span>
-        <span id="climb-status-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🧗 CLIMBING</span>
-        <span id="fly-status-indicator" style="color:#00ff66; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">FLYING (F)</span>
-        <button id="mute-audio-btn" class="dashboard-btn" style="background:#4a4a4a; color:#00ff66; margin-right:10px;" onclick="toggleAudioMute()">🔊 Audio Active</button>
-        <button id="jumpout-seat-btn" class="dashboard-btn" style="background:#ff9500; display:none; margin-right:10px;" onclick="jumpOutSeat()">Jump Out (Space)</button>
-        <button class="dashboard-btn" style="background:#cc2900;" onclick="exitToHubMenu()">Disconnect</button>
+    <div id="topbar-container">
+        <div class="topbar-left">
+            <button class="topbar-icon-btn" title="Menu" style="font-weight:900;">☰</button>
+            <button class="topbar-icon-btn" id="topbar-chat-toggle" onclick="toggleChatWindow()">💬</button>
+        </div>
+        <div class="topbar-right">
+            <button class="topbar-icon-btn" id="mute-audio-btn" onclick="toggleAudioMute()" style="font-size:0.9rem;">🔊</button>
+            <button class="topbar-icon-btn" style="background:#ff3b30; font-size:0.8rem; width:55px;" onclick="exitToHubMenu()">Leave</button>
+        </div>
     </div>
 
-    <div id="room-stats-panel">
-        <div style="font-weight:bold; font-size:0.75rem; color:#00e1ff; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px; border-bottom:1px solid #333; padding-bottom:4px;">Room Analytics</div>
-        <div class="stat-row">
-            <span>Active Players:</span>
-            <span id="stat-players-count" class="stat-val">0</span>
-        </div>
-        <div class="stat-row">
-            <span>Total Shapes:</span>
-            <span id="stat-shapes-count" class="stat-val">0</span>
-        </div>
+    <div id="roblox-leaderboard">
+        <div class="leaderboard-header">People</div>
+        <div id="leaderboard-list-entries"></div>
     </div>
 
     <div id="chat-window">
         <div id="chat-logs"></div>
         <form id="chat-form" onsubmit="sendChatMessage(event)">
-            <input type="text" id="chat-input" placeholder="Type chat message here... (Press Enter)" maxlength="60" autocomplete="off">
+            <input type="text" id="chat-input" placeholder="To chat click here or press '/' key" maxlength="60" autocomplete="off">
         </form>
+    </div>
+
+    <div id="status-hud-container">
+        <div id="water-status-indicator" class="status-pill" style="color: #3399ff;">🌊 Swimming</div>
+        <div id="climb-status-indicator" class="status-pill" style="color: #ffcc00;">🧗 Climbing</div>
+        <div id="fly-status-indicator" class="status-pill" style="color: #00ff66;">✈️ Flying</div>
+        <button id="jumpout-seat-btn" class="status-pill" style="background: #ff9500; color:white; display:none; pointer-events:auto; border:none; cursor:pointer;" onclick="jumpOutSeat()">Jump Out</button>
     </div>
 
     <div id="studio-sidebar">
         <div class="sidebar-section">
-            <div class="sidebar-title">Global Room Config</div>
+            <div class="sidebar-title">Workspace Config</div>
             <div class="toggle-container">
-                <label style="font-weight:bold;">Players Collide</label>
+                <label>Avatar Collisions</label>
                 <input type="checkbox" id="room-players-collide" onchange="updateRoomGlobalConfig()">
             </div>
-            <div class="toggle-container" style="margin-top: 8px; border: 1px solid #00ff66;">
-                <label style="font-weight:bold; color:#00ff66;">Fly Mode (F)</label>
+            <div class="toggle-container">
+                <label style="color:#00ff66;">Fly Editor Mode (F)</label>
                 <input type="checkbox" id="studio-fly-toggle" onchange="toggleFlightMode(this.checked)">
             </div>
-            <div style="margin-top:12px; border-top: 1px solid #333; padding-top:10px;">
-                <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px; font-weight:bold;">🎵 Room Background Music:</label>
+            <div style="margin-top:10px;">
+                <label style="font-size:11px; color:#aaa; display:block; margin-bottom:2px;">Custom Soundtrack Asset:</label>
                 <input type="file" id="bgm-uploader" accept="audio/*" style="font-size:11px; width:100%;">
             </div>
         </div>
 
         <div class="sidebar-section">
-            <div class="sidebar-title">Toolbox</div>
+            <div class="sidebar-title">Toolbox / Inserts</div>
             <div class="asset-tray" id="toolbox-tray">
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('brick')">🧱 Brick</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('sphere')">🔮 Sphere</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('wedge')">📐 Wedge</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('cylinder')">📦 Cylinder</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('capsule')">💎 Capsule</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('cone')">📐 Cone</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('torus')">🪐 Torus</div>
-                
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('water')" style="border-color:#3399ff; color:#3399ff;">🌊 Water</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500;">💺 Seat</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('ladder')" style="border-color:#ffcc00; color:#ffcc00;">🪜 Ladder</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('checkpoint')" style="border-color:#00ff66; color:#00ff66;">🏁 Checkpoint</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('anim_rig')" style="border-color:#ff00e1; color:#ff00e1;">🕺 Animation Rig</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('brick')">Part (Block)</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('sphere')">Part (Sphere)</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('wedge')">Part (Wedge)</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('cylinder')">Part (Cyl)</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('water')" style="color:#3399ff;">Water Zone</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="color:#ff9500;">Seat Part</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('ladder')" style="color:#ffcc00;">Truss (Ladder)</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('checkpoint')" style="color:#00ff66;">Spawn Point</div>
             </div>
             <div style="margin-top:8px;">
-                <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px;">Upload Custom Mesh (.glb):</label>
+                <label style="font-size:11px; color:#aaa; display:block;">Mesh (.glb) Uploader:</label>
                 <input type="file" id="glb-uploader" accept=".glb" style="font-size:11px; width:100%;">
             </div>
         </div>
 
         <div class="sidebar-section" style="flex:1; overflow-y:auto;">
-            <div class="sidebar-title">Properties Inspector</div>
-            <div id="no-selection-msg" style="color:#777; font-style:italic; text-align:center; padding:10px 0;">Click an object to drag or inspect</div>
+            <div class="sidebar-title">Properties Window</div>
+            <div id="no-selection-msg" style="color:#777; font-style:italic; text-align:center; padding:10px 0;">Select a Workspace Instance</div>
             
-            <div id="inspector-controls" style="display:none; flex-direction:column; gap:10px;">
+            <div id="inspector-controls" style="display:none; flex-direction:column; gap:8px;">
                 <div class="prop-grid">
-                    <label>Pos</label>
+                    <label>Position</label>
                     <div class="prop-inputs">
                         <input type="number" step="0.5" id="p-x" onchange="updateSelectedProperty()">
                         <input type="number" step="0.5" id="p-y" onchange="updateSelectedProperty()">
@@ -295,85 +290,43 @@
                     </div>
                 </div>
                 <div class="prop-grid">
-                    <label>Scale</label>
+                    <label>Size</label>
                     <div class="prop-inputs">
-                        <input type="number" step="0.1" min="0.1" id="s-x" onchange="updateSelectedProperty()">
-                        <input type="number" step="0.1" min="0.1" id="s-y" onchange="updateSelectedProperty()">
-                        <input type="number" step="0.1" min="0.1" id="s-z" onchange="updateSelectedProperty()">
-                    </div>
-                </div>
-                <div class="prop-grid">
-                    <label>Rot</label>
-                    <div class="prop-inputs">
-                        <input type="number" step="5" id="r-x" onchange="updateSelectedProperty()">
-                        <input type="number" step="5" id="r-y" onchange="updateSelectedProperty()">
-                        <input type="number" step="5" id="r-z" onchange="updateSelectedProperty()">
+                        <input type="number" step="0.5" id="s-x" onchange="updateSelectedProperty()">
+                        <input type="number" step="0.5" id="s-y" onchange="updateSelectedProperty()">
+                        <input type="number" step="0.5" id="s-z" onchange="updateSelectedProperty()">
                     </div>
                 </div>
                 <div class="prop-grid">
                     <label>Color</label>
-                    <input type="color" id="p-color" style="width:100%; height:25px; cursor:pointer;" onchange="updateSelectedProperty()">
+                    <input type="color" id="p-color" style="width:100%; height:24px;" onchange="updateSelectedProperty()">
                 </div>
-                
                 <div class="prop-grid">
-                    <label style="color:#ffcc00; font-size:11px;">Text Box</label>
-                    <input type="text" id="p-text-label" placeholder="Floating text annotations..." style="background:#2b2b2b; border:1px solid #444; border-radius:4px; color:#fff; padding:4px; font-size:0.8rem;" onchange="updateSelectedProperty()">
+                    <label>Label</label>
+                    <input type="text" id="p-text-label" placeholder="Billboard Gui Text..." style="background:#1e1e1e; border:1px solid #3f3f46; color:#fff; padding:4px;" onchange="updateSelectedProperty()">
                 </div>
 
                 <div class="toggle-container">
-                    <label style="font-weight:bold; color:#00e1ff;">CanCollide</label>
+                    <label>CanCollide</label>
                     <input type="checkbox" id="p-cancollide" onchange="updateSelectedProperty()">
                 </div>
-                <div class="toggle-container" style="border: 1px dashed #ff9500; padding: 4px 8px;">
-                    <label style="font-weight:bold; color:#ff9500;">Is Physical (Physics)</label>
+                <div class="toggle-container">
+                    <label>Anchored (Physics)</label>
                     <input type="checkbox" id="p-isphysical" onchange="updateSelectedProperty()">
                 </div>
-                <div class="toggle-container">
-                    <label style="font-weight:bold;">Is Spawn?</label>
-                    <input type="checkbox" id="p-spawn" onchange="updateSelectedProperty()">
-                </div>
                 
-                <div class="prop-grid" style="margin-top: 4px;">
-                    <label style="font-size:10px; color:#ffcc00;">Respawn (s)</label>
-                    <input type="number" id="p-respawntime" min="0" max="300" placeholder="0 = Never" style="background:#2b2b2b; border:1px solid #444; border-radius:4px; color:#fff; padding:4px; font-size:0.8rem;" onchange="updateSelectedProperty()">
+                <div style="margin-top:4px;">
+                    <label style="font-weight:bold; color:#00ff66; display:block;">LuaScript (onTouch):</label>
+                    <textarea id="p-code" class="code-editor-box" onchange="updateSelectedProperty()"></textarea>
                 </div>
 
-                <div id="rig-pose-editor" style="display:none; border-top: 1px dashed #ff00e1; margin-top:8px; padding-top:8px;">
-                    <div style="font-weight:bold; color:#ff00e1; margin-bottom:5px; font-size:11px;">Rig Bone Manipulator</div>
-                    <div class="rig-slider-group">
-                        <label>Head Rotation (Yaw)</label>
-                        <input type="range" id="rig-slider-head" min="-90" max="90" value="0" oninput="updateSelectedProperty()">
-                    </div>
-                    <div class="rig-slider-group">
-                        <label>Left Arm Swing</label>
-                        <input type="range" id="rig-slider-larm" min="-90" max="90" value="0" oninput="updateSelectedProperty()">
-                    </div>
-                    <div class="rig-slider-group">
-                        <label>Right Arm Swing</label>
-                        <input type="range" id="rig-slider-rarm" min="-90" max="90" value="0" oninput="updateSelectedProperty()">
-                    </div>
-                    <div class="rig-slider-group">
-                        <label>Left Leg Angle</label>
-                        <input type="range" id="rig-slider-lleg" min="-90" max="90" value="0" oninput="updateSelectedProperty()">
-                    </div>
-                    <div class="rig-slider-group">
-                        <label>Right Leg Angle</label>
-                        <input type="range" id="rig-slider-rleg" min="-90" max="90" value="0" oninput="updateSelectedProperty()">
-                    </div>
-                </div>
-
-                <div style="margin-top:5px; border-top: 1px dashed #333; padding-top:10px;">
-                    <label style="font-weight:bold; color:#00ff66; display:block;">Object Code (onTouch):</label>
-                    <textarea id="p-code" class="code-editor-box" placeholder="/* API HELPER GUIDE:&#10; * player.respawn();&#10; * player.teleport(x, y, z);&#10; * player.setCheckpoint(x, y, z);&#10; */&#10;function onTouch(player) {&#10;  player.respawn();&#10;}" onchange="updateSelectedProperty()"></textarea>
-                </div>
-
-                <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:10px;" onclick="deleteSelectedPart()">Delete Selected Object</button>
+                <button class="action-btn" style="background:#ff3b30; width:100%; margin-top:5px;" onclick="deleteSelectedPart()">Delete Instance</button>
             </div>
         </div>
 
-        <div class="sidebar-section" style="background:#151515; display:flex; gap:5px;">
-            <button class="dashboard-btn" style="font-size:11px; flex:1; background:#3a3a3a;" onclick="copyMapJSON()">Export JSON</button>
-            <button class="dashboard-btn" style="font-size:11px; flex:1; background:#3a3a3a;" onclick="pasteMapOverrideJSON()">Import JSON</button>
+        <div class="sidebar-section" style="background:#1e1e1e; display:flex; gap:5px;">
+            <button class="action-btn" style="flex:1; font-size:11px;" onclick="copyMapJSON()">Export Map</button>
+            <button class="action-btn" style="flex:1; font-size:11px;" onclick="pasteMapOverrideJSON()">Import Map</button>
         </div>
     </div>
 
@@ -412,22 +365,18 @@
         let localData = { 
             id: playerId, username: "Guest",
             x: 0, y: 3, z: 0, rotY: 0, color: Math.random() * 0xffffff, room: 'lobby',
-            sittingOn: "", legSwing: 0, isMoving: false, isSubmerged: false, state: "idle"
+            sittingOn: "", legSwing: 0, isMoving: false, state: "idle"
         };
         
         let velocityY = 0;
         let isGrounded = false;
         
-        let cameraZoomDistance = 15;
-        const minZoom = 0.5, maxZoom = 45;
-        let cameraYaw = 0, cameraPitch = 0.6;
+        let cameraZoomDistance = 14;
+        const minZoom = 0.5, maxZoom = 50;
+        let cameraYaw = 0, cameraPitch = 0.4;
         let isPointerLocked = false;
         let isRightMouseDown = false, isLeftMouseDown = false;
         let isFirstPerson = false;
-        
-        let mobileTargetDestination = null;
-        let mobileLookStartTouch = null;
-        let touchIndicatorRing = null;
 
         let spawnPoint = { x: 0, y: 1.5, z: 0 }; 
         let activeCheckpoint = null; 
@@ -443,30 +392,28 @@
         let selectedBlockId = null, draggingBlockId = null;
         const keys = {};
 
-        let hiddenBlocks = {};
-
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a222d);
+        // Authentic Roblox Classic happy bright blue workspace sky color
+        scene.background = new THREE.Color(0x9cc3e6);
         
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.05, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(10, 25, 15);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(20, 40, 20);
         scene.add(dirLight);
 
+        // Standard Default Green Baseplate Setup
+        const baseplateGeom = new THREE.BoxGeometry(600, 2, 600);
+        const baseplateMat = new THREE.MeshStandardMaterial({ color: 0x448c4a, roughness: 0.9 });
+        const baseplateMesh = new THREE.Mesh(baseplateGeom, baseplateMat);
+        baseplateMesh.position.y = -1;
+        scene.add(baseplateMesh);
+
         const gltfLoader = new GLTFLoader();
-
-        const ringGeom = new THREE.RingGeometry(0.3, 0.4, 32);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00e1ff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
-        touchIndicatorRing = new THREE.Mesh(ringGeom, ringMat);
-        touchIndicatorRing.rotation.x = Math.PI / 2;
-        touchIndicatorRing.visible = false;
-        scene.add(touchIndicatorRing);
-
         let playerMeshes = {};
         let blockMap = new Map(); 
         let blockDataArray = [];
@@ -481,13 +428,7 @@
         }
 
         document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement === renderer.domElement) {
-                isPointerLocked = true;
-                document.getElementById('lock-indicator').innerText = "Mouse locked (Press ESC to unlock)";
-            } else {
-                isPointerLocked = false;
-                document.getElementById('lock-indicator').innerText = "Click screen to lock mouse";
-            }
+            isPointerLocked = (document.pointerLockElement === renderer.domElement);
         });
 
         function respawnPlayer() {
@@ -500,9 +441,6 @@
             isGrounded = false;
             inWater = false;
             isClimbing = false;
-            localData.isSubmerged = false;
-            mobileTargetDestination = null;
-            touchIndicatorRing.visible = false;
             document.getElementById('jumpout-seat-btn').style.display = 'none';
             document.getElementById('water-status-indicator').style.display = 'none';
             document.getElementById('climb-status-indicator').style.display = 'none';
@@ -517,6 +455,11 @@
             document.getElementById('fly-status-indicator').style.display = state ? 'block' : 'none';
         };
 
+        window.toggleChatWindow = function() {
+            const win = document.getElementById('chat-window');
+            win.style.display = (win.style.display === 'none' || win.style.display === '') ? 'flex' : 'none';
+        };
+
         window.setDragAsset = function(type) { 
             if(!isStudioMode) return;
             draggedAssetType = type; 
@@ -528,8 +471,7 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(evt) {
-                const base64Audio = evt.target.result;
-                set(ref(db, `maps/${localData.room}/config/audioTrack`), base64Audio);
+                set(ref(db, `maps/${localData.room}/config/audioTrack`), evt.target.result);
             };
             reader.readAsDataURL(file);
         });
@@ -537,16 +479,9 @@
         window.toggleAudioMute = function() {
             audioMuted = !audioMuted;
             bgAudioElement.muted = audioMuted;
-            const btn = document.getElementById('mute-audio-btn');
-            if(audioMuted) {
-                btn.innerText = "🔇 Muted";
-                btn.style.color = "#ff3b30";
-            } else {
-                btn.innerText = "🔊 Audio Active";
-                btn.style.color = "#00ff66";
-                if(bgAudioElement.paused && bgAudioElement.src) {
-                    bgAudioElement.play().catch(e => console.log(e));
-                }
+            document.getElementById('mute-audio-btn').innerText = audioMuted ? "🔇" : "🔊";
+            if(!audioMuted && bgAudioElement.paused && bgAudioElement.src) {
+                bgAudioElement.play().catch(e => console.log(e));
             }
         };
 
@@ -557,22 +492,12 @@
             const reader = new FileReader();
             reader.onload = function(evt) { 
                 base64MeshString = evt.target.result; 
-
-                const existingCustom = document.getElementById('custom-drag-item');
-                if(existingCustom) existingCustom.remove();
-
-                const customTrayItem = document.createElement('div');
-                customTrayItem.id = "custom-drag-item";
-                customTrayItem.className = "tray-item";
-                customTrayItem.innerText = "✨ Custom GLTF Mesh";
-                customTrayItem.setAttribute("draggable", "true");
-                customTrayItem.style.borderColor = "#00ff66";
-                customTrayItem.style.color = "#00ff66";
-                customTrayItem.addEventListener('dragstart', () => {
-                    setDragAsset('glb');
-                });
-
-                document.getElementById('toolbox-tray').appendChild(customTrayItem);
+                let item = document.getElementById('custom-drag-item') || document.createElement('div');
+                item.id = "custom-drag-item"; item.className = "tray-item";
+                item.innerText = "Mesh Part"; item.setAttribute("draggable", "true");
+                item.style.borderColor = "#00ff66";
+                item.addEventListener('dragstart', () => setDragAsset('glb'));
+                document.getElementById('toolbox-tray').appendChild(item);
             };
             reader.readAsDataURL(file);
         });
@@ -580,7 +505,7 @@
         document.body.addEventListener('dragover', e => e.preventDefault());
         document.body.addEventListener('drop', (e) => {
             if (!isStudioMode || !gameInitialized || !activeRoomBlocksRef || !draggedAssetType) return;
-            if (e.clientX > window.innerWidth - 320) return; 
+            if (e.clientX > window.innerWidth - 300) return; 
 
             const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
             const raycaster = new THREE.Raycaster();
@@ -593,34 +518,29 @@
                     type: draggedAssetType,
                     x: Math.round(target.x), y: Math.round(localData.y), z: Math.round(target.z),
                     sx: 2, sy: 2, sz: 2, rx: 0, ry: 0, rz: 0,
-                    color: "#00e1ff", canCollide: true, isSpawn: false, code: "", textLabel: "", isPhysical: false, respawnTime: 0
+                    color: "#a3a3a3", canCollide: true, isSpawn: false, code: "", textLabel: "", isPhysical: false
                 };
 
-                blockPayload.sx = draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?1.5:(draggedAssetType==='checkpoint'?3:(draggedAssetType==='anim_rig'?1.2:2))));
-                blockPayload.sy = draggedAssetType==='seat'?0.6:(draggedAssetType==='ladder'?3:(draggedAssetType==='checkpoint'?0.2:(draggedAssetType==='anim_rig'?2.4:2)));
-                blockPayload.sz = draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?0.2:(draggedAssetType==='checkpoint'?3:(draggedAssetType==='anim_rig'?1.2:2))));
-                blockPayload.color = draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":(draggedAssetType==='ladder'?"#ffcc00":(draggedAssetType==='checkpoint'?"#00ff66":(draggedAssetType==='anim_rig'?"#ff00e1":"#00e1ff"))));
-                blockPayload.canCollide = (draggedAssetType !== 'water' && draggedAssetType !== 'ladder' && draggedAssetType !== 'checkpoint');
+                blockPayload.sx = draggedAssetType==='brick'?4:(draggedAssetType==='seat'?2:(draggedAssetType==='ladder'?2:3));
+                blockPayload.sy = draggedAssetType==='seat'?0.6:(draggedAssetType==='ladder'?6:(draggedAssetType==='checkpoint'?0.4:2));
+                blockPayload.sz = draggedAssetType==='brick'?4:(draggedAssetType==='seat'?2:(draggedAssetType==='ladder'?0.4:3));
+                blockPayload.color = draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":(draggedAssetType==='ladder'?"#ffcc00":(draggedAssetType==='checkpoint'?"#e22222":"#a3a3a3")));
+                blockPayload.canCollide = (draggedAssetType !== 'water' && draggedAssetType !== 'ladder');
                 
-                if(draggedAssetType === 'checkpoint') blockPayload.code = "player.setCheckpoint(thisBlock.x, thisBlock.y, thisBlock.z);";
+                if(draggedAssetType === 'checkpoint') { blockPayload.isSpawn = true; blockPayload.color = "#00e266"; }
                 if(draggedAssetType === 'glb') blockPayload.meshData = base64MeshString;
-                if(draggedAssetType === 'anim_rig') {
-                    blockPayload.rigHead = 0; blockPayload.rigLarm = 0; blockPayload.rigRarm = 0; blockPayload.rigLleg = 0; blockPayload.rigRleg = 0;
-                }
 
                 push(activeRoomBlocksRef, blockPayload);
             }
-            if(draggedAssetType !== 'glb') draggedAssetType = ""; 
         });
 
         window.updateRoomGlobalConfig = function() {
-            if(!isStudioMode || !gameInitialized) return alert("Operation Denied.");
+            if(!isStudioMode || !gameInitialized) return;
             set(ref(db, `maps/${localData.room}/config/playersCollide`), document.getElementById('room-players-collide').checked);
         };
 
         window.updateSelectedProperty = function() {
-            if(!isStudioMode) return alert("Operation Denied.");
-            if (!selectedBlockId || !activeRoomBlocksRef) return;
+            if(!isStudioMode || !selectedBlockId) return;
             const currentObj = currentRoomBlocks[selectedBlockId];
             if(!currentObj) return;
 
@@ -628,40 +548,24 @@
                 x: parseFloat(document.getElementById('p-x').value),
                 y: parseFloat(document.getElementById('p-y').value),
                 z: parseFloat(document.getElementById('p-z').value),
-                sx: parseFloat(document.getElementById('s-x').value) || 0.1,
-                sy: parseFloat(document.getElementById('s-y').value) || 0.1,
-                sz: parseFloat(document.getElementById('s-z').value) || 0.1,
-                rx: parseFloat(document.getElementById('r-x').value) || 0,
-                ry: parseFloat(document.getElementById('r-y').value) || 0,
-                rz: parseFloat(document.getElementById('r-z').value) || 0,
+                sx: parseFloat(document.getElementById('s-x').value) || 0.2,
+                sy: parseFloat(document.getElementById('s-y').value) || 0.2,
+                sz: parseFloat(document.getElementById('s-z').value) || 0.2,
+                rx: currentObj.rx || 0, ry: currentObj.ry || 0, rz: currentObj.rz || 0,
                 color: document.getElementById('p-color').value,
                 canCollide: document.getElementById('p-cancollide').checked,
                 isPhysical: document.getElementById('p-isphysical').checked,
-                isSpawn: document.getElementById('p-spawn').checked,
-                respawnTime: parseInt(document.getElementById('p-respawntime').value) || 0,
+                isSpawn: !!currentObj.isSpawn,
                 code: document.getElementById('p-code').value || "",
                 textLabel: document.getElementById('p-text-label').value || "",
                 type: currentObj.type || "brick"
             };
             if(currentObj.meshData) updateObj.meshData = currentObj.meshData;
-            
-            if (currentObj.type === 'anim_rig') {
-                updateObj.rigHead = parseInt(document.getElementById('rig-slider-head').value) || 0;
-                updateObj.rigLarm = parseInt(document.getElementById('rig-slider-larm').value) || 0;
-                updateObj.rigRarm = parseInt(document.getElementById('rig-slider-rarm').value) || 0;
-                updateObj.rigLleg = parseInt(document.getElementById('rig-slider-lleg').value) || 0;
-                updateObj.rigRleg = parseInt(document.getElementById('rig-slider-rleg').value) || 0;
-            }
-
-            if (updateObj.isPhysical) {
-                updateObj.velX = currentObj.velX || 0; updateObj.velY = currentObj.velY || 0; updateObj.velZ = currentObj.velZ || 0;
-            }
             set(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`), updateObj);
         };
 
         window.deleteSelectedPart = function() {
-            if(!isStudioMode) return alert("Operation Denied.");
-            if (!selectedBlockId) return;
+            if(!isStudioMode || !selectedBlockId) return;
             remove(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`));
             closeInspector();
         };
@@ -676,27 +580,11 @@
             document.getElementById('s-x').value = blockData.sx || 1;
             document.getElementById('s-y').value = blockData.sy || 1;
             document.getElementById('s-z').value = blockData.sz || 1;
-            document.getElementById('r-x').value = blockData.rx || 0;
-            document.getElementById('r-y').value = blockData.ry || 0;
-            document.getElementById('r-z').value = blockData.rz || 0;
-            document.getElementById('p-color').value = blockData.color || "#00e1ff";
+            document.getElementById('p-color').value = blockData.color || "#ffffff";
             document.getElementById('p-text-label').value = blockData.textLabel || "";
             document.getElementById('p-cancollide').checked = (blockData.canCollide !== false);
             document.getElementById('p-isphysical').checked = !!blockData.isPhysical;
-            document.getElementById('p-spawn').checked = !!blockData.isSpawn;
-            document.getElementById('p-respawntime').value = blockData.respawnTime || 0;
             document.getElementById('p-code').value = blockData.code || "";
-
-            if (blockData.type === 'anim_rig') {
-                document.getElementById('rig-pose-editor').style.display = 'block';
-                document.getElementById('rig-slider-head').value = blockData.rigHead || 0;
-                document.getElementById('rig-slider-larm').value = blockData.rigLarm || 0;
-                document.getElementById('rig-slider-rarm').value = blockData.rigRarm || 0;
-                document.getElementById('rig-slider-lleg').value = blockData.rigLleg || 0;
-                document.getElementById('rig-slider-rleg').value = blockData.rigRleg || 0;
-            } else {
-                document.getElementById('rig-pose-editor').style.display = 'none';
-            }
         }
 
         function closeInspector() {
@@ -707,7 +595,7 @@
 
         window.jumpOutSeat = function() {
             if(!localData.sittingOn) return;
-            localData.sittingOn = ""; velocityY = 0.18; localData.y += 1.2;
+            localData.sittingOn = ""; velocityY = 10; localData.y += 1.5;
             document.getElementById('jumpout-seat-btn').style.display = 'none';
         };
 
@@ -718,76 +606,71 @@
             if (!msg || !activeRoomChatRef) return;
             push(activeRoomChatRef, { username: localData.username, text: msg, time: Date.now() });
             input.value = ""; input.blur();
-            if (!isStudioMode) requestPointerLock();
+            requestPointerLock();
         };
 
-        function calculateRoomMetrics() {
-            const totalShapes = Object.keys(currentRoomBlocks).length;
-            document.getElementById('stat-shapes-count').innerText = totalShapes;
-            let currentRoomPlayers = 0;
+        function renderLeaderboard() {
+            const listEl = document.getElementById('leaderboard-list-entries');
+            listEl.innerHTML = "";
+            
+            // Add local player
+            const row = document.createElement('div'); row.className = "leaderboard-row";
+            row.innerHTML = `<span class="leaderboard-name" style="color:#fff; font-weight:bold;">${localData.username}</span><span class="leaderboard-stat">0</span>`;
+            listEl.appendChild(row);
+
+            // Add other serverside avatars
             Object.keys(remotePlayers).forEach(id => {
-                if (remotePlayers[id] && remotePlayers[id].room === localData.room) currentRoomPlayers++;
+                const p = remotePlayers[id];
+                if (p && p.room === localData.room) {
+                    const r = document.createElement('div'); r.className = "leaderboard-row";
+                    r.innerHTML = `<span class="leaderboard-name">${p.username}</span><span class="leaderboard-stat">0</span>`;
+                    listEl.appendChild(r);
+                }
             });
-            if(gameInitialized && currentRoomPlayers === 0) currentRoomPlayers = 1;
-            document.getElementById('stat-players-count').innerText = currentRoomPlayers;
         }
 
-        /* --- BEAUTIFUL ARTICULATED PROCEDURAL HUMAN MODEL RIG CREATOR --- */
-        function createProceduralPlayerRig(customColor) {
-            const playerGroup = new THREE.Group();
-            const primaryMat = new THREE.MeshStandardMaterial({ color: customColor, roughness: 0.4 });
-            const darkMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6 });
-            const glowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+        /* --- CLASSIC ROBLOX BLOCKY RIG ENGINE (R6 PROTOCOL LAYOUT) --- */
+        function createRobloxBlockyRig(customColor) {
+            const rigGroup = new THREE.Group();
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xffd400, roughness: 0.6 }); // Yellow skin!
+            const clothMat = new THREE.MeshStandardMaterial({ color: customColor, roughness: 0.6 });
 
-            // Torso Base Hub
-            const torsoGeom = new THREE.BoxGeometry(0.8, 1.0, 0.45);
-            const torso = new THREE.Mesh(torsoGeom, primaryMat);
-            torso.position.y = 0.9;
-            playerGroup.add(torso);
+            // Torso (Boxy block)
+            const torsoGeom = new THREE.BoxGeometry(1.0, 1.0, 0.5);
+            const torso = new THREE.Mesh(torsoGeom, clothMat);
+            torso.position.y = 1.0;
+            rigGroup.add(torso);
 
-            // Tech Backpack / Jetpack
-            const packGeom = new THREE.BoxGeometry(0.6, 0.7, 0.25);
-            const backpack = new THREE.Mesh(packGeom, darkMat);
-            backpack.position.set(0, 0.05, -0.3);
-            torso.add(backpack);
-
-            // Head Pivot Anchor Assembly
+            // Head (Classic blocky bevel style expression sphere/cube)
             const headPivot = new THREE.Group();
-            headPivot.position.y = 0.6; 
+            headPivot.position.y = 0.5; 
             torso.add(headPivot);
 
-            const headGeom = new THREE.SphereGeometry(0.35, 16, 16);
-            const head = new THREE.Mesh(headGeom, primaryMat);
-            head.position.y = 0.2;
+            const headGeom = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const head = new THREE.Mesh(headGeom, skinMat);
+            head.position.y = 0.25;
             headPivot.add(head);
 
-            // Sci-Fi Visor Face plate
-            const visorGeom = new THREE.BoxGeometry(0.45, 0.15, 0.2);
-            const visor = new THREE.Mesh(visorGeom, glowMat);
-            visor.position.set(0, 0.2, 0.28);
-            headPivot.add(visor);
+            // Left & Right Block Arms
+            const leftArmPivot = new THREE.Group(); leftArmPivot.position.set(-0.75, 0.5, 0); torso.add(leftArmPivot);
+            const rightArmPivot = new THREE.Group(); rightArmPivot.position.set(0.75, 0.5, 0); torso.add(rightArmPivot);
 
-            // Articulated Arms Joints
-            const leftArmPivot = new THREE.Group(); leftArmPivot.position.set(-0.55, 0.4, 0); torso.add(leftArmPivot);
-            const rightArmPivot = new THREE.Group(); rightArmPivot.position.set(0.55, 0.4, 0); torso.add(rightArmPivot);
+            const armGeom = new THREE.BoxGeometry(0.45, 1.0, 0.45);
+            armGeom.translate(0, -0.5, 0); 
+            const leftArm = new THREE.Mesh(armGeom, skinMat); leftArmPivot.add(leftArm);
+            const rightArm = new THREE.Mesh(armGeom, skinMat); rightArmPivot.add(rightArm);
 
-            const armGeom = new THREE.CylinderGeometry(0.12, 0.1, 0.8, 8);
-            armGeom.translate(0, -0.3, 0); 
-            const leftArm = new THREE.Mesh(armGeom, darkMat); leftArmPivot.add(leftArm);
-            const rightArm = new THREE.Mesh(armGeom, darkMat); rightArmPivot.add(rightArm);
-
-            // Articulated Legs Joints
+            // Left & Right Block Legs
             const leftLegPivot = new THREE.Group(); leftLegPivot.position.set(-0.25, -0.5, 0); torso.add(leftLegPivot);
             const rightLegPivot = new THREE.Group(); rightLegPivot.position.set(0.25, -0.5, 0); torso.add(rightLegPivot);
 
-            const legGeom = new THREE.CylinderGeometry(0.14, 0.12, 0.9, 8);
-            legGeom.translate(0, -0.4, 0);
-            const leftLeg = new THREE.Mesh(legGeom, primaryMat); leftLegPivot.add(leftLeg);
-            const rightLeg = new THREE.Mesh(legGeom, primaryMat); rightLegPivot.add(rightLeg);
+            const legGeom = new THREE.BoxGeometry(0.48, 1.0, 0.48);
+            legGeom.translate(0, -0.5, 0);
+            const leftLeg = new THREE.Mesh(legGeom, clothMat); leftLegPivot.add(leftLeg);
+            const rightLeg = new THREE.Mesh(legGeom, clothMat); rightLegPivot.add(rightLeg);
 
-            // Package reference bindings for stateful update loops
-            playerGroup.userData = { torso, headPivot, leftArmPivot, rightArmPivot, leftLegPivot, rightLegPivot };
-            return playerGroup;
+            rigGroup.userData = { torso, headPivot, leftArmPivot, rightArmPivot, leftLegPivot, rightLegPivot };
+            return rigGroup;
         }
 
         window.enterGame = async function() {
@@ -795,7 +678,7 @@
             const roomInput = document.getElementById('search-room-input').value.trim().toLowerCase();
             const typedPassword = document.getElementById('admin-pass-input').value.trim();
 
-            localData.username = nickname || "Guest_" + Math.floor(Math.random() * 900);
+            localData.username = nickname || "Player " + Math.floor(Math.random() * 900);
             localData.room = roomInput || 'lobby';
             isStudioMode = false;
             activeCheckpoint = null;
@@ -811,8 +694,6 @@
                     if (data.audioTrack && bgAudioElement.src !== data.audioTrack) {
                         bgAudioElement.src = data.audioTrack;
                         if (!audioMuted) bgAudioElement.play().catch(e => console.log(e));
-                    } else if (!data.audioTrack) {
-                        bgAudioElement.removeAttribute('src'); bgAudioElement.load();
                     }
                 }
             });
@@ -820,8 +701,7 @@
             try {
                 const snapshot = await get(configRef);
                 if (snapshot.exists()) {
-                    const dbConfig = snapshot.val();
-                    if (dbConfig.password && typedPassword === dbConfig.password) isStudioMode = true;
+                    if (snapshot.val().password && typedPassword === snapshot.val().password) isStudioMode = true;
                 } else if (typedPassword.length > 0) {
                     await set(configRef, { password: typedPassword, playersCollide: false });
                     isStudioMode = true;
@@ -829,11 +709,10 @@
             } catch(e) { console.error(e); }
 
             document.getElementById('home-menu').style.opacity = '0';
-            setTimeout(() => document.getElementById('home-menu').style.display = 'none', 500);
-            document.getElementById('ui-container').style.display = 'flex';
-            document.getElementById('room-stats-panel').style.display = 'flex';
+            setTimeout(() => document.getElementById('home-menu').style.display = 'none', 300);
+            document.getElementById('topbar-container').style.display = 'flex';
+            document.getElementById('roblox-leaderboard').style.display = 'flex';
             document.getElementById('chat-window').style.display = 'flex';
-            document.getElementById('room-indicator').innerText = `ROOM: ${localData.room.toUpperCase()}`;
 
             if(isStudioMode) {
                 document.getElementById('studio-sidebar').style.display = 'flex';
@@ -847,15 +726,12 @@
             set(playerRef, localData);
             onDisconnect(playerRef).remove();
 
-            // Load and dynamically monitor sandbox parts matrix
             onValue(activeRoomBlocksRef, (snapshot) => {
                 const incomingBlocks = snapshot.val() || {};
                 currentRoomBlocks = incomingBlocks;
                 
                 blockMap.forEach((mesh, id) => {
-                    if (!incomingBlocks[id]) {
-                        scene.remove(mesh); blockMap.delete(id);
-                    }
+                    if (!incomingBlocks[id]) { scene.remove(mesh); blockMap.delete(id); }
                 });
 
                 blockDataArray = [];
@@ -866,142 +742,83 @@
                     b.id = id;
                     blockDataArray.push(b);
 
-                    if (b.isSpawn) {
-                        spawnPoint = { x: b.x, y: b.y + (b.sy / 2) + 0.5, z: b.z };
-                    }
+                    if (b.isSpawn) spawnPoint = { x: b.x, y: b.y + (b.sy / 2) + 0.5, z: b.z };
 
                     let mesh = blockMap.get(id);
                     if (!mesh) {
-                        // Custom data URL builder handler or standard geometric shapes
                         if (b.type === 'glb' && b.meshData) {
                             mesh = new THREE.Group();
-                            fetch(b.meshData)
-                                .then(res => res.arrayBuffer())
-                                .then(buffer => {
-                                    gltfLoader.parse(buffer, '', (gltf) => {
-                                        mesh.add(gltf.scene);
-                                    }, (err) => console.error("GLB Parse fail: ", err));
-                                }).catch(err => console.error("GLB ArrayBuffer fail: ", err));
-                        } else if (b.type === 'anim_rig') {
-                            mesh = createProceduralPlayerRig(b.color || "#ff00e1");
+                            gltfLoader.load(b.meshData, (gltf) => mesh.add(gltf.scene));
                         } else {
                             let geom;
-                            if (b.type === 'sphere') geom = new THREE.SphereGeometry(0.5, 24, 24);
-                            else if (b.type === 'cylinder') geom = new THREE.CylinderGeometry(0.5, 0.5, 1, 24);
-                            else if (b.type === 'cone') geom = new THREE.ConeGeometry(0.5, 1, 24);
-                            else if (b.type === 'torus') geom = new THREE.TorusGeometry(0.4, 0.15, 12, 24);
-                            else if (b.type === 'capsule') geom = new THREE.CapsuleGeometry(0.35, 0.5, 8, 16);
+                            if (b.type === 'sphere') geom = new THREE.SphereGeometry(0.5, 16, 16);
+                            else if (b.type === 'cylinder') geom = new THREE.CylinderGeometry(0.5, 0.5, 1, 16);
                             else if (b.type === 'wedge') {
                                 geom = new THREE.BufferGeometry();
                                 const vertices = new Float32Array([
                                     -0.5,-0.5,-0.5,  0.5,-0.5,-0.5,  -0.5,-0.5,0.5,   0.5,-0.5,0.5,
                                     -0.5,0.5,-0.5,   0.5,0.5,-0.5
                                 ]);
-                                const indices = [
-                                    0,2,1, 1,2,3, 0,1,4, 1,5,4, 0,4,2, 4,5,1, 1,3,5, 2,4,3, 4,5,3
-                                ];
+                                const indices = [0,2,1, 1,2,3, 0,1,4, 1,5,4, 0,4,2, 4,5,1, 1,3,5, 2,4,3, 4,5,3];
                                 geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
                                 geom.setIndex(indices); geom.computeVertexNormals();
                             } else {
                                 geom = new THREE.BoxGeometry(1, 1, 1);
                             }
                             
-                            const opacityVal = (b.type === 'water') ? 0.45 : 1.0;
+                            const opacityVal = (b.type === 'water') ? 0.5 : 1.0;
                             const mat = new THREE.MeshStandardMaterial({ 
-                                color: b.color || 0x00e1ff, 
-                                transparent: (b.type === 'water'), 
-                                opacity: opacityVal,
-                                roughness: 0.2
+                                color: b.color || 0xdddddd, transparent: (b.type === 'water'), opacity: opacityVal, roughness: 0.8
                             });
                             mesh = new THREE.Mesh(geom, mat);
                         }
-                        
                         scene.add(mesh); blockMap.set(id, mesh);
                     }
 
-                    // Synchronize transforms safely
                     mesh.position.set(b.x, b.y, b.z);
                     mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
-                    mesh.rotation.set(
-                        THREE.MathUtils.degToRad(b.rx || 0),
-                        THREE.MathUtils.degToRad(b.ry || 0),
-                        THREE.MathUtils.degToRad(b.rz || 0)
-                    );
-
-                    // If it is an animation mannequin rig, adjust static bone vectors
-                    if (b.type === 'anim_rig' && mesh.userData && mesh.userData.headPivot) {
-                        const ud = mesh.userData;
-                        ud.headPivot.rotation.y = THREE.MathUtils.degToRad(b.rigHead || 0);
-                        ud.leftArmPivot.rotation.x = THREE.MathUtils.degToRad(b.rigLarm || 0);
-                        ud.rightArmPivot.rotation.x = THREE.MathUtils.degToRad(b.rigRarm || 0);
-                        ud.leftLegPivot.rotation.x = THREE.MathUtils.degToRad(b.rigLleg || 0);
-                        ud.rightLegPivot.rotation.x = THREE.MathUtils.degToRad(b.rigRleg || 0);
-                    }
-
-                    mesh.visible = !hiddenBlocks[id];
                 });
-
-                calculateRoomMetrics();
             });
 
-            // Monitor active network player vectors
             onValue(ref(db, `rooms/${localData.room}/players`), (snapshot) => {
-                const players = snapshot.val() || {};
-                remotePlayers = players;
-
+                const players = snapshot.val() || {}; remotePlayers = players;
                 Object.keys(playerMeshes).forEach(id => {
-                    if (!players[id]) {
-                        scene.remove(playerMeshes[id]); delete playerMeshes[id];
-                    }
+                    if (!players[id]) { scene.remove(playerMeshes[id]); delete playerMeshes[id]; }
                 });
-
                 Object.keys(players).forEach(id => {
                     if (id === playerId) return;
                     const p = players[id];
                     let pGroup = playerMeshes[id];
                     if (!pGroup) {
-                        pGroup = createProceduralPlayerRig(p.color || 0x00e1ff);
+                        pGroup = createRobloxBlockyRig(p.color || 0x00A2FF);
                         scene.add(pGroup); playerMeshes[id] = pGroup;
                     }
-                    
-                    pGroup.position.set(p.x, p.y - 0.9, p.z);
-                    pGroup.rotation.y = (p.rotY || 0) + Math.PI; // Face correct walking direction online
+                    pGroup.position.set(p.x, p.y - 1.0, p.z);
+                    pGroup.rotation.y = p.rotY || 0;
 
-                    // Animate networked characters statefully
+                    // Network Animation Handling
                     const t = performance.now() * 0.001;
                     const bones = pGroup.userData;
                     if (bones) {
                         if (p.sittingOn) {
-                            bones.torso.position.y = 0.4;
-                            bones.leftArmPivot.rotation.x = -0.4; bones.rightArmPivot.rotation.x = -0.4;
+                            bones.leftArmPivot.rotation.x = -0.5; bones.rightArmPivot.rotation.x = -0.5;
                             bones.leftLegPivot.rotation.x = -Math.PI / 2; bones.rightLegPivot.rotation.x = -Math.PI / 2;
+                        } else if (p.isMoving) {
+                            bones.leftArmPivot.rotation.x = Math.sin(t * 10) * 0.6; bones.rightArmPivot.rotation.x = -Math.sin(t * 10) * 0.6;
+                            bones.leftLegPivot.rotation.x = -Math.sin(t * 10) * 0.6; bones.rightLegPivot.rotation.x = Math.sin(t * 10) * 0.6;
                         } else {
-                            bones.torso.position.y = 0.9;
-                            if (p.state === "climbing") {
-                                bones.leftArmPivot.rotation.x = Math.sin(t * 12) * 0.8; bones.rightArmPivot.rotation.x = -Math.sin(t * 12) * 0.8;
-                                bones.leftLegPivot.rotation.x = -Math.sin(t * 12) * 0.4; bones.rightLegPivot.rotation.x = Math.sin(t * 12) * 0.4;
-                            } else if (p.state === "swimming") {
-                                bones.leftArmPivot.rotation.x = Math.PI/2 + Math.sin(t * 8) * 0.6; bones.rightArmPivot.rotation.x = Math.PI/2 + Math.cos(t * 8) * 0.6;
-                                bones.leftLegPivot.rotation.x = Math.sin(t * 8) * 0.3; bones.rightLegPivot.rotation.x = -Math.sin(t * 8) * 0.3;
-                            } else if (p.isMoving) {
-                                bones.leftArmPivot.rotation.x = Math.sin(t * 10) * 0.7; bones.rightArmPivot.rotation.x = -Math.sin(t * 10) * 0.7;
-                                bones.leftLegPivot.rotation.x = -Math.sin(t * 10) * 0.6; bones.rightLegPivot.rotation.x = Math.sin(t * 10) * 0.6;
-                                bones.torso.position.y = 0.9 + Math.abs(Math.sin(t * 20)) * 0.08;
-                            } else {
-                                bones.leftArmPivot.rotation.x = Math.sin(t * 2) * 0.05; bones.rightArmPivot.rotation.x = -Math.sin(t * 2) * 0.05;
-                                bones.leftLegPivot.rotation.x = 0; bones.rightLegPivot.rotation.x = 0;
-                                bones.torso.position.y = 0.9 + Math.sin(t * 2) * 0.02;
-                            }
+                            bones.leftArmPivot.rotation.x = 0; bones.rightArmPivot.rotation.x = 0;
+                            bones.leftLegPivot.rotation.x = 0; bones.rightLegPivot.rotation.x = 0;
                         }
                     }
                 });
-                calculateRoomMetrics();
+                renderLeaderboard();
             });
 
             onValue(activeRoomChatRef, (snapshot) => {
                 const data = snapshot.val(); if (!data) return;
                 const logs = document.getElementById('chat-logs'); logs.innerHTML = "";
-                const sorted = Object.values(data).sort((a,b) => a.time - b.time).slice(-30);
+                const sorted = Object.values(data).sort((a,b) => a.time - b.time).slice(-25);
                 sorted.forEach(m => {
                     const div = document.createElement('div'); div.className = 'chat-msg';
                     div.innerHTML = `<span class="chat-tag">[${m.username}]:</span> ${m.text}`;
@@ -1022,36 +839,27 @@
         window.addEventListener('keydown', e => {
             const key = e.key.toLowerCase(); keys[key] = true;
             if (e.key === ' ' && localData.sittingOn) { e.preventDefault(); jumpOutSeat(); }
-            if (key === 'f' && isStudioMode) { toggleFlightMode(!isFlying); }
+            if (e.key === '/') { e.preventDefault(); document.getElementById('chat-input').focus(); }
+            if (key === 'f' && isStudioMode) toggleFlightMode(!isFlying);
         });
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-        // Interaction Click & Raycasting System
         window.addEventListener('mousedown', (e) => {
-            if (!gameInitialized || e.clientX > window.innerWidth - (isStudioMode ? 320 : 0)) return;
+            if (!gameInitialized || e.clientX > window.innerWidth - (isStudioMode ? 300 : 0)) return;
             if (e.button === 0) { isLeftMouseDown = true; requestPointerLock(); }
             if (e.button === 2) isRightMouseDown = true;
 
             if (isStudioMode && e.button === 0) {
                 const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
                 const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(mouse, camera);
-                
                 const intersects = raycaster.intersectObjects(Array.from(blockMap.values()), true);
                 if (intersects.length > 0) {
                     let clickedGroup = intersects[0].object;
-                    while(clickedGroup.parent && clickedGroup.parent !== scene) {
-                        clickedGroup = clickedGroup.parent;
-                    }
-                    
+                    while(clickedGroup.parent && clickedGroup.parent !== scene) clickedGroup = clickedGroup.parent;
                     let foundId = null;
                     blockMap.forEach((mesh, id) => { if(mesh === clickedGroup) foundId = id; });
-                    if (foundId) {
-                        draggingBlockId = foundId;
-                        openInspector(foundId, currentRoomBlocks[foundId]);
-                    }
-                } else {
-                    closeInspector();
-                }
+                    if (foundId) { draggingBlockId = foundId; openInspector(foundId, currentRoomBlocks[foundId]); }
+                } else { closeInspector(); }
             }
         });
 
@@ -1063,11 +871,11 @@
         window.addEventListener('mousemove', (e) => {
             if (isPointerLocked && !isStudioMode) {
                 cameraYaw -= e.movementX * 0.0025;
-                cameraPitch = Math.max(-Math.PI/2.1, Math.min(Math.PI/2.1, cameraPitch - e.movementY * 0.0025));
+                cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch - e.movementY * 0.0025));
                 localData.rotY = cameraYaw;
             } else if (isStudioMode && isRightMouseDown) {
                 cameraYaw -= e.movementX * 0.003;
-                cameraPitch = Math.max(-Math.PI/2.1, Math.min(Math.PI/2.1, cameraPitch - e.movementY * 0.003));
+                cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch - e.movementY * 0.003));
             }
 
             if (isStudioMode && draggingBlockId && isLeftMouseDown) {
@@ -1088,20 +896,17 @@
 
         window.copyMapJSON = function() {
             navigator.clipboard.writeText(JSON.stringify(currentRoomBlocks, null, 2));
-            alert("Sandbox Map JSON copied successfully!");
+            alert("Workspace Map Exported!");
         };
 
         window.pasteMapOverrideJSON = function() {
-            const raw = prompt("Paste structural Map override JSON package string:");
+            const raw = prompt("Paste Map override structural JSON configuration string:");
             if(!raw) return;
-            try {
-                const parsed = JSON.parse(raw);
-                set(activeRoomBlocksRef, parsed);
-            } catch(err) { alert("Format verification failed."); }
+            try { set(activeRoomBlocksRef, JSON.parse(raw)); } catch(err) { alert("Invalid format package."); }
         };
 
-        // Core Local Articulated Avatar Mesh
-        const localVisualModel = createProceduralPlayerRig(0x00ffcc);
+        // Core Blocky Player Mesh Instance
+        const localVisualModel = createRobloxBlockyRig(0x00A2FF);
         scene.add(localVisualModel);
 
         const clock = new THREE.Clock();
@@ -1116,33 +921,18 @@
             inWater = false; isClimbing = false;
             let currentSeat = null;
 
-            // Physics collision checking & resolution layers
-            const px = localData.x, py = localData.y, pz = localData.z;
-            const r = 0.4; 
-            let onSolidBlock = false;
-
             blockDataArray.forEach(b => {
-                if (hiddenBlocks[b.id]) return;
-
                 const minX = b.x - b.sx/2, maxX = b.x + b.sx/2;
                 const minY = b.y - b.sy/2, maxY = b.y + b.sy/2;
                 const minZ = b.z - b.sz/2, maxZ = b.z + b.sz/2;
+                const px = localData.x, py = localData.y, pz = localData.z;
+                const r = 0.4; 
 
                 if (px + r > minX && px - r < maxX && py + 1.2 > minY && py - 0.2 < maxY && pz + r > minZ && pz - r < maxZ) {
                     if (b.type === 'water') inWater = true;
                     if (b.type === 'ladder') isClimbing = true;
                     if (b.type === 'seat' && !localData.sittingOn) currentSeat = b;
 
-                    // Solid Block resolution layer logic (Land on top of objects)
-                    if (b.canCollide !== false && b.type !== 'water' && b.type !== 'ladder' && b.type !== 'seat') {
-                        if (velocityY <= 0 && (py - velocityY * dt) >= maxY - 0.25) {
-                            localData.y = maxY + 0.2;
-                            velocityY = 0;
-                            onSolidBlock = true;
-                        }
-                    }
-
-                    // Trigger block custom scripting layer handlers securely
                     if (b.code && b.code.trim().length > 0) {
                         try {
                             const runtimeContextPlayer = {
@@ -1162,32 +952,24 @@
 
             if (currentSeat && !localData.sittingOn && !keys[' ']) {
                 localData.sittingOn = currentSeat.id;
-                localData.x = currentSeat.x; localData.y = currentSeat.y + currentSeat.sy/2 + 0.3; localData.z = currentSeat.z;
+                localData.x = currentSeat.x; localData.y = currentSeat.y + currentSeat.sy/2 + 0.4; localData.z = currentSeat.z;
                 velocityY = 0; isGrounded = true;
                 document.getElementById('jumpout-seat-btn').style.display = 'block';
             }
 
-            // Stateful Locomotion Systems
             let moving = false;
             localData.state = "idle";
 
             if (!localData.sittingOn) {
                 let moveX = 0, moveZ = 0;
-
-                // View-relative movement logic calculation vectors
-                const fX = -Math.sin(cameraYaw);
-                const fZ = -Math.cos(cameraYaw);
-                const rX = -Math.cos(cameraYaw);
-                const rZ = Math.sin(cameraYaw);
-
-                if (keys['w'] || keys['arrowup']) { moveX += fX; moveZ += fZ; }
-                if (keys['s'] || keys['arrowdown']) { moveX -= fX; moveZ -= fZ; }
-                if (keys['a'] || keys['arrowleft']) { moveX -= rX; moveZ -= rZ; }
-                if (keys['d'] || keys['arrowright']) { moveX += rX; moveZ += rZ; }
+                if (keys['w'] || keys['arrowup']) { moveX += Math.sin(cameraYaw); moveZ += Math.cos(cameraYaw); }
+                if (keys['s'] || keys['arrowdown']) { moveX -= Math.sin(cameraYaw); moveZ -= Math.cos(cameraYaw); }
+                if (keys['a'] || keys['arrowleft']) { moveX += Math.cos(cameraYaw); moveZ -= Math.sin(cameraYaw); }
+                if (keys['d'] || keys['arrowright']) { moveX -= Math.cos(cameraYaw); moveZ += Math.sin(cameraYaw); }
 
                 const len = Math.sqrt(moveX*moveX + moveZ*moveZ);
                 if (len > 0) {
-                    const speed = isFlying ? 14 : (inWater ? 3.5 : 7.2);
+                    const speed = isFlying ? 16 : (inWater ? 4.0 : 8.5);
                     localData.x += (moveX / len) * speed * dt;
                     localData.z += (moveZ / len) * speed * dt;
                     moving = true;
@@ -1196,84 +978,62 @@
 
                 if (isFlying) {
                     localData.state = "flying";
-                    if (keys[' ']) localData.y += 8 * dt;
-                    if (keys['shift']) localData.y -= 8 * dt;
+                    if (keys[' ']) localData.y += 10 * dt;
+                    if (keys['shift']) localData.y -= 10 * dt;
                 } else if (isClimbing) {
                     localData.state = "climbing";
                     velocityY = 0;
-                    if (keys['w'] || keys['arrowup'] || keys[' ']) { localData.y += 4.5 * dt; moving = true; }
-                    else if (keys['s'] || keys['arrowdown']) { localData.y -= 4.5 * dt; moving = true; }
+                    if (keys['w'] || keys['arrowup'] || keys[' ']) { localData.y += 5 * dt; moving = true; }
+                    else if (keys['s'] || keys['arrowdown']) { localData.y -= 5 * dt; moving = true; }
                 } else if (inWater) {
                     localData.state = "swimming";
                     velocityY = 0;
-                    if (keys[' ']) localData.y += 3.5 * dt;
-                    if (keys['shift']) localData.y -= 3.5 * dt;
-                    
-                    localData.y -= 0.5 * dt; 
+                    if (keys[' ']) localData.y += 4 * dt;
+                    if (keys['shift']) localData.y -= 4 * dt;
+                    localData.y -= 0.6 * dt; 
                     if(localData.y < 0) localData.y = 0; 
                 } else {
-                    if (onSolidBlock) {
-                        isGrounded = true;
+                    velocityY -= 26 * dt; // Gravity mechanics
+                    localData.y += velocityY * dt;
+
+                    if (localData.y <= 1.0) {
+                        localData.y = 1.0; velocityY = 0; isGrounded = true;
                     } else {
-                        // Regular Gravity Simulation layers
-                        velocityY -= 9.81 * 2.2 * dt;
-                        localData.y += velocityY * dt;
-
-                        if (localData.y <= 0.9) {
-                            localData.y = 0.9; velocityY = 0; isGrounded = true;
-                        } else {
-                            isGrounded = false;
-                            localData.state = "airborne";
-                        }
+                        isGrounded = false;
                     }
 
-                    if (keys[' '] && isGrounded) {
-                        velocityY = 11.5; isGrounded = false; onSolidBlock = false;
-                    }
+                    if (keys[' '] && isGrounded) { velocityY = 12; isGrounded = false; }
                 }
             }
 
             localData.isMoving = moving;
             if (playerRef) set(playerRef, localData);
 
-            // Sync visual representation transform coordinates
-            localVisualModel.position.set(localData.x, localData.y - 0.9, localData.z);
-            localVisualModel.rotation.y = cameraYaw + Math.PI; // Correct model facing orientation direction
+            localVisualModel.position.set(localData.x, localData.y - 1.0, localData.z);
+            localVisualModel.rotation.y = cameraYaw;
 
-            // Handle Camera Viewport Clipping & Positioning Matrices
             isFirstPerson = (cameraZoomDistance <= 0.8);
-            document.getElementById('fps-view-indicator').style.display = isFirstPerson ? 'block' : 'none';
             localVisualModel.visible = !isFirstPerson;
 
             const bones = localVisualModel.userData;
             if (bones) {
                 if (localData.sittingOn) {
-                    bones.torso.position.y = 0.4;
-                    bones.leftArmPivot.rotation.x = -0.4; bones.rightArmPivot.rotation.x = -0.4;
+                    bones.leftArmPivot.rotation.x = -0.5; bones.rightArmPivot.rotation.x = -0.5;
                     bones.leftLegPivot.rotation.x = -Math.PI / 2; bones.rightLegPivot.rotation.x = -Math.PI / 2;
                 } else {
-                    bones.torso.position.y = 0.9;
-                    if (localData.state === "climbing") {
-                        bones.leftArmPivot.rotation.x = Math.sin(time * 12) * 0.8; bones.rightArmPivot.rotation.x = -Math.sin(time * 12) * 0.8;
-                        bones.leftLegPivot.rotation.x = -Math.sin(time * 12) * 0.4; bones.rightLegPivot.rotation.x = Math.sin(time * 12) * 0.4;
-                    } else if (localData.state === "swimming") {
-                        bones.leftArmPivot.rotation.x = Math.PI/2 + Math.sin(time * 8) * 0.6; bones.rightArmPivot.rotation.x = Math.PI/2 + Math.cos(time * 8) * 0.6;
-                        bones.leftLegPivot.rotation.x = Math.sin(time * 8) * 0.3; bones.rightLegPivot.rotation.x = -Math.sin(time * 8) * 0.3;
-                    } else if (moving) {
-                        bones.leftArmPivot.rotation.x = Math.sin(time * 10) * 0.7; bones.rightArmPivot.rotation.x = -Math.sin(time * 10) * 0.7;
-                        bones.leftLegPivot.rotation.x = -Math.sin(time * 10) * 0.6; bones.rightLegPivot.rotation.x = Math.sin(time * 10) * 0.6;
-                        bones.torso.position.y = 0.9 + Math.abs(Math.sin(time * 20)) * 0.08;
+                    if (moving) {
+                        bones.leftArmPivot.rotation.x = Math.sin(time * 11) * 0.6; bones.rightArmPivot.rotation.x = -Math.sin(time * 11) * 0.6;
+                        bones.leftLegPivot.rotation.x = -Math.sin(time * 11) * 0.6; bones.rightLegPivot.rotation.x = Math.sin(time * 11) * 0.6;
                     } else {
-                        bones.leftArmPivot.rotation.x = Math.sin(time * 2) * 0.05; bones.rightArmPivot.rotation.x = -Math.sin(time * 2) * 0.05;
+                        bones.leftArmPivot.rotation.x = 0; bones.rightArmPivot.rotation.x = 0;
                         bones.leftLegPivot.rotation.x = 0; bones.rightLegPivot.rotation.x = 0;
-                        bones.torso.position.y = 0.9 + Math.sin(time * 2) * 0.02;
                     }
                 }
             }
 
             const headHeight = 1.6;
             const targetX = localData.x;
-            const targetY = localData.y + headHeight - 0.9;
+            const targetY = localData.y + headHeight - 1.0;
             const targetZ = localData.z;
 
             if (isFirstPerson) {
@@ -1289,7 +1049,7 @@
                 const offsetY = cameraZoomDistance * Math.sin(cameraPitch);
                 const offsetZ = cameraZoomDistance * Math.cos(cameraYaw) * Math.cos(cameraPitch);
                 camera.position.set(targetX + offsetX, targetY + offsetY, targetZ + offsetZ);
-                camera.lookAt(targetX, targetY - 0.5, targetZ);
+                camera.lookAt(targetX, targetY, targetZ);
             }
 
             renderer.render(scene, camera);
