@@ -82,6 +82,24 @@
         }
         .dashboard-btn:hover { background: #4a4a4a; }
 
+        /* Game Chat Overlay Box UI */
+        #chat-window {
+            position: absolute; bottom: 20px; left: 20px; width: 320px; height: 240px;
+            background: rgba(0, 0, 0, 0.7); border: 1px solid #444; border-radius: 10px;
+            display: none; flex-direction: column; z-index: 15; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        }
+        #chat-logs {
+            flex: 1; padding: 10px; overflow-y: auto; color: #fff; font-size: 0.85rem;
+            display: flex; flex-direction: column; gap: 4px; font-family: sans-serif;
+        }
+        .chat-msg { line-height: 1.3; word-break: break-all; }
+        .chat-tag { color: #00e1ff; font-weight: bold; }
+        #chat-form { display: flex; border-top: 1px solid #444; background: #111; border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
+        #chat-input {
+            flex: 1; background: transparent; border: none; padding: 8px 12px;
+            color: #fff; font-size: 0.85rem; outline: none;
+        }
+
         /* Studio Editor Sidebar Layouts */
         #studio-sidebar {
             position: absolute; right: 0; top: 0; width: 300px; height: 100vh;
@@ -176,6 +194,13 @@
         <span id="fly-status-indicator" style="color:#00ff66; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">FLYING (F)</span>
         <button id="jumpout-seat-btn" class="dashboard-btn" style="background:#ff9500; display:none; margin-right:10px;" onclick="jumpOutSeat()">Jump Out (Space)</button>
         <button class="dashboard-btn" style="background:#cc2900;" onclick="exitToHubMenu()">Disconnect</button>
+    </div>
+
+    <div id="chat-window">
+        <div id="chat-logs"></div>
+        <form id="chat-form" onsubmit="sendChatMessage(event)">
+            <input type="text" id="chat-input" placeholder="Type chat message here... (Press Enter)" maxlength="60" autocomplete="off">
+        </form>
     </div>
 
     <div id="studio-sidebar">
@@ -291,6 +316,7 @@
         const playerId = "player_" + Math.random().toString(36).substr(2, 9);
         let playerRef = null;
         let activeRoomBlocksRef = null;
+        let activeRoomChatRef = null;
 
         let gameInitialized = false;
         let isStudioMode = false; 
@@ -326,6 +352,26 @@
         let currentRoomBlocks = {};
         let selectedBlockId = null, draggingBlockId = null;
         const keys = {};
+
+        // Generate Character Face Decal Canvas
+        let faceTextureCache = null;
+        function generateFaceTexture() {
+            if (faceTextureCache) return faceTextureCache;
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = "#ffcc99"; ctx.fillRect(0, 0, 128, 128); // Match structural head skin tone base
+            ctx.fillStyle = "#111111";
+            ctx.fillRect(30, 45, 14, 26); // Left Eye
+            ctx.fillRect(84, 45, 14, 26); // Right Eye
+
+            ctx.strokeStyle = "#111111"; ctx.lineWidth = 6; ctx.lineCap = "round";
+            ctx.beginPath(); ctx.arc(64, 75, 20, 0, Math.PI, false); ctx.stroke(); // Classic Smile Outline
+
+            faceTextureCache = new THREE.CanvasTexture(canvas);
+            return faceTextureCache;
+        }
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x1a222d);
@@ -496,6 +542,21 @@
             document.getElementById('jumpout-seat-btn').style.display = 'none';
         };
 
+        // Networked Chat Operations Tray
+        window.sendChatMessage = function(event) {
+            event.preventDefault();
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (!msg || !activeRoomChatRef) return;
+            push(activeRoomChatRef, {
+                username: localData.username,
+                text: msg,
+                time: Date.now()
+            });
+            input.value = "";
+            input.blur();
+        };
+
         window.enterGame = async function() {
             const nickname = document.getElementById('username-input').value.trim();
             const roomInput = document.getElementById('search-room-input').value.trim().toLowerCase();
@@ -535,12 +596,32 @@
             setTimeout(() => {
                 document.getElementById('home-menu').style.display = 'none';
                 document.getElementById('ui-container').style.display = 'flex';
+                document.getElementById('chat-window').style.display = 'flex';
                 if (isStudioMode) document.getElementById('studio-sidebar').style.display = 'flex';
             }, 500);
 
             playerRef = ref(db, `players/${playerId}`);
             set(playerRef, localData);
             onDisconnect(playerRef).remove();
+
+            // Realtime Text Chat Synchronization Channel Setup
+            activeRoomChatRef = ref(db, `chats/${localData.room}`);
+            const cleanLogs = document.getElementById('chat-logs');
+            cleanLogs.innerHTML = ""; 
+            
+            onValue(activeRoomChatRef, (snap) => {
+                if(!snap.exists()) return;
+                cleanLogs.innerHTML = "";
+                const items = snap.val();
+                Object.keys(items).forEach(k => {
+                    const row = items[k];
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = "chat-msg";
+                    msgDiv.innerHTML = `<span class="chat-tag">${row.username}:</span> ${row.text}`;
+                    cleanLogs.appendChild(msgDiv);
+                });
+                cleanLogs.scrollTop = cleanLogs.scrollHeight;
+            });
 
             activeRoomBlocksRef = ref(db, `maps/${localData.room}/blocks`);
             onValue(activeRoomBlocksRef, (snap) => {
@@ -604,6 +685,7 @@
 
             document.getElementById('ui-container').style.display = 'none';
             document.getElementById('studio-sidebar').style.display = 'none';
+            document.getElementById('chat-window').style.display = 'none';
             document.getElementById('home-menu').style.display = 'flex';
             setTimeout(() => { document.getElementById('home-menu').style.opacity = 1; }, 50);
         };
@@ -629,12 +711,12 @@
         function createWedgeGeometry() {
             const geom = new THREE.BufferGeometry();
             const vertices = new Float32Array([
-                -0.5, -0.5,  0.5, // 0: Front bottom left
-                 0.5, -0.5,  0.5, // 1: Front bottom right
-                -0.5, -0.5, -0.5, // 2: Back bottom left
-                 0.5, -0.5, -0.5, // 3: Back bottom right
-                -0.5,  0.5, -0.5, // 4: Back top left
-                 0.5,  0.5, -0.5  // 5: Back top right
+                -0.5, -0.5,  0.5, 
+                 0.5, -0.5,  0.5, 
+                -0.5, -0.5, -0.5, 
+                 0.5, -0.5, -0.5, 
+                -0.5,  0.5, -0.5, 
+                 0.5,  0.5, -0.5  
             ]);
 
             const indices = [
@@ -918,7 +1000,19 @@
             const skinMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
 
             const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.5), mat); torso.position.y = 1.6; torso.name = "torso"; group.add(torso);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat); head.position.y = 2.45; head.name = "head"; group.add(head);
+            
+            // Texture mapping structural system implementation for character faces
+            const faceDecalMaterial = new THREE.MeshStandardMaterial({ map: generateFaceTexture(), transparent: false });
+            const materialsArray = [
+                skinMat, // Right
+                skinMat, // Left
+                skinMat, // Top
+                skinMat, // Bottom
+                faceDecalMaterial, // Front face mapping array node position
+                skinMat  // Back
+            ];
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), materialsArray); 
+            head.position.y = 2.45; head.name = "head"; group.add(head);
 
             const leftArmPivot = new THREE.Group(); leftArmPivot.position.set(-0.7, 2.1, 0); leftArmPivot.name = "leftArmPivot";
             const leftArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), mat); leftArmMesh.position.y = -0.5; leftArmPivot.add(leftArmMesh); group.add(leftArmPivot);
@@ -946,7 +1040,15 @@
         }
 
         window.addEventListener('keydown', e => {
-            if(document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            if(document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                if(e.key === 'Escape') document.activeElement.blur();
+                return;
+            }
+            if(e.key.toLowerCase() === 't') {
+                e.preventDefault();
+                document.getElementById('chat-input').focus();
+                return;
+            }
             keys[e.key.toLowerCase()] = true;
             if(e.key === ' ' && localData.sittingOn) jumpOutSeat();
             if(e.key.toLowerCase() === 'f' && isStudioMode) toggleFlightMode(!isFlying);
