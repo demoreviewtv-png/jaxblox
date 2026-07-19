@@ -690,11 +690,10 @@
                     globalRoomConfig.playersCollide = !!data.playersCollide;
                     document.getElementById('room-players-collide').checked = globalRoomConfig.playersCollide;
                     
-                    // Audio track sync setup
                     if (data.audioTrack && bgAudioElement.src !== data.audioTrack) {
                         bgAudioElement.src = data.audioTrack;
                         if (!audioMuted) {
-                            bgAudioElement.play().catch(e => console.log("Audio activation requires interacting with the window document first: ", e));
+                            bgAudioElement.play().catch(e => console.log("Audio presentation requires gesture interactions: ", e));
                         }
                     } else if (!data.audioTrack) {
                         bgAudioElement.removeAttribute('src');
@@ -729,7 +728,6 @@
                     document.getElementById('lock-indicator').style.display = 'inline';
                     requestPointerLock();
                 }
-                // Fallback catch to fire loaded music instances after viewport launch gestures
                 if(bgAudioElement.src && !audioMuted && bgAudioElement.paused) {
                     bgAudioElement.play().catch(() => {});
                 }
@@ -927,11 +925,17 @@
                 const blockWrapperGroup = new THREE.Group();
                 blockWrapperGroup.position.set(b.x, b.y, b.z);
 
+                // Re-apply original wrapper group rotation logic cleanly
+                blockWrapperGroup.rotation.set(
+                    THREE.MathUtils.degToRad(b.rx || 0),
+                    THREE.MathUtils.degToRad(b.ry || 0),
+                    THREE.MathUtils.degToRad(b.rz || 0)
+                );
+
                 if (b.type === 'glb' && b.meshData) {
                     gltfLoader.load(b.meshData, (gltf) => {
                         const model = gltf.scene;
                         model.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
-                        model.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
                         
                         model.traverse(child => {
                             if (child.isMesh && child.material) {
@@ -946,7 +950,6 @@
                 } else if(b.type === 'ladder') {
                     const mesh = createLadderGeometry();
                     mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
-                    mesh.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
                     mesh.userData = { blockId: key, isLadder: true };
                     blockWrapperGroup.add(mesh);
                 } else {
@@ -972,24 +975,19 @@
                     }
                     const mesh = new THREE.Mesh(geometry, material);
                     mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
-                    mesh.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
                     mesh.userData = { blockId: key, isSeat: (b.type === 'seat'), isWater: (b.type === 'water'), isCheckpoint: (b.type === 'checkpoint') };
                     blockWrapperGroup.add(mesh);
                 }
 
                 if (b.textLabel && b.textLabel.trim().length > 0) {
-                    const boundingHeightHeight = (b.sy || 1) / 2 + 0.95;
                     const textLabelSprite = createObjectTextLabel(b.textLabel.trim());
-                    textLabelSprite.position.set(0, boundingHeightHeight, 0);
-                    blockWrapperGroup.add(textLabelSprite);
+                    // Keep the text box unrotated relative to the parent group structure so it renders legibly
+                    textLabelSprite.position.set(0, (b.sy || 1) / 2 + 0.95, 0);
+                    scene.add(textLabelSprite);
+                    
+                    // Link the text tracking directly to world layout updates
+                    blockWrapperGroup.userData.attachedTextSprite = textLabelSprite;
                 }
-
-                // Apply wrapper configurations natively to support local space computations downstream
-                blockWrapperGroup.rotation.set(
-                    THREE.MathUtils.degToRad(b.rx || 0),
-                    THREE.MathUtils.degToRad(b.ry || 0),
-                    THREE.MathUtils.degToRad(b.rz || 0)
-                );
 
                 scene.add(blockWrapperGroup);
                 blockMap.set(key, blockWrapperGroup);
@@ -1006,11 +1004,6 @@
                 let actualW = parseFloat(b.sx) || 1.0;
                 let actualH = parseFloat(b.sy) || 1.0;
                 let actualD = parseFloat(b.sz) || 1.0;
-                if (b.type === 'torus') {
-                    actualW *= 0.8; 
-                    actualH *= 0.35; 
-                    actualD *= 0.8;
-                }
 
                 blockDataArray.push({
                     id: key, 
@@ -1020,6 +1013,10 @@
                     w: actualW,
                     h: actualH,
                     d: actualD,
+                    rx: b.rx || 0,
+                    ry: b.ry || 0,
+                    rz: b.rz || 0,
+                    isSpawn: !!b.isSpawn,
                     isSeat: (b.type === 'seat'),
                     isWater: (b.type === 'water'),
                     isLadder: (b.type === 'ladder'),
@@ -1344,11 +1341,6 @@
             setCheckpoint: (x, y, z) => { activeCheckpoint = { x, y, z }; }
         };
 
-        // Pre-allocate structural reference components outside runtime loops to prevent memory allocation drops
-        const playerPos = new THREE.Vector3();
-        const localPlayerPos = new THREE.Vector3();
-        const matrixWorldInverse = new THREE.Matrix4();
-
         function animate() {
             requestAnimationFrame(animate);
 
@@ -1409,12 +1401,10 @@
 
                     let nextY = localData.y;
                     let playerRadius = 0.45;
-                    let playerHeight = 2.0;
                     let currentlyInWater = false;
                     let touchingLadder = false;
                     let groundHit = false;
 
-                    // Compute multiplayer player push displacements before map bounding evaluations
                     if (globalRoomConfig.playersCollide) {
                         Object.keys(remotePlayers).forEach(id => {
                             if (id === playerId || remotePlayers[id].room !== localData.room) return;
@@ -1448,82 +1438,53 @@
 
                     if (nextY < -25) { respawnPlayer(); return; }
 
-                    // Process complete Oriented Bounding Box physics computations in a single localized check block
-                    playerPos.set(nextX, nextY, nextZ);
-
+                    // Clean AABB collision resolution layout with stable structural offsets
                     blockDataArray.forEach(b => {
-                        const visualMesh = blockMap.get(b.id);
-                        if (!visualMesh) return;
+                        if (b.isSpawn) return; // Keep spawns uncollidable so loading points never block players
 
-                        // Transform player world data array coordinates natively into block local matrix environments
-                        visualMesh.updateMatrixWorld();
-                        matrixWorldInverse.copy(visualMesh.matrixWorld).invert();
-                        localPlayerPos.copy(playerPos).applyMatrix4(matrixWorldInverse);
+                        let minX = b.x - b.w / 2 - playerRadius;
+                        let maxX = b.x + b.w / 2 + playerRadius;
+                        let minZ = b.z - b.d / 2 - playerRadius;
+                        let maxZ = b.z + b.d / 2 + playerRadius;
+                        let minY = b.y - b.h / 2 - 2.0;
+                        let maxY = b.y + b.h / 2;
 
-                        // Calculate bounds offset parameters based on target block attributes
-                        const halfX = b.w / 2 + (b.canCollide ? playerRadius : 0.3);
-                        const halfY = b.h / 2 + (b.canCollide ? 0.0 : 0.3);
-                        const halfZ = b.d / 2 + (b.canCollide ? playerRadius : 0.3);
-
-                        const withinX = Math.abs(localPlayerPos.x) <= halfX;
-                        const withinY = localPlayerPos.y >= -b.h/2 - 0.2 && localPlayerPos.y <= b.h/2 + playerHeight;
-                        const withinZ = Math.abs(localPlayerPos.z) <= halfZ;
-
-                        if (withinX && withinY && withinZ) {
+                        if (nextX >= minX && nextX <= maxX && nextZ >= minZ && nextZ <= maxZ && nextY >= minY && nextY <= maxY + 0.2) {
                             if (b.isWater) currentlyInWater = true;
                             if (b.isLadder) touchingLadder = true;
-                            
+
                             if (b.executeTouch && Date.now() - b.lastExecutionTime > 1000) {
                                 b.lastExecutionTime = Date.now();
-                                try { b.executeTouch(scriptSandboxAPI); } catch(err) { console.error("Script Runtime Error:", err); }
+                                try { b.executeTouch(scriptSandboxAPI); } catch(err) { console.error(err); }
                             }
 
                             if (b.canCollide && !b.isWater && !b.isLadder && !isFlying) {
-                                const surfaceTop = b.h / 2;
-                                
-                                // Determine if the player is landing directly over a rotated upper surface shelf configuration
-                                if (velocityY <= 0 && localPlayerPos.y >= surfaceTop - 0.4 && localPlayerPos.y <= surfaceTop + 0.25) {
+                                // Dynamic upper surface checks
+                                if (velocityY <= 0 && nextY >= maxY - 0.35) {
                                     if (b.isSeat && !localData.sittingOn) {
                                         localData.sittingOn = b.id;
                                     } else {
-                                        localPlayerPos.y = surfaceTop;
-                                        const worldSnapped = localPlayerPos.clone().applyMatrix4(visualMesh.matrixWorld);
-                                        nextY = worldSnapped.y;
-                                        
+                                        nextY = maxY;
                                         velocityY = 0;
                                         isGrounded = true;
                                         groundHit = true;
-                                        
-                                        // Re-sync analytical vectors downstream safely
-                                        playerPos.y = nextY;
                                     }
                                 } else {
-                                    // Project pushing forces outwards along the thinnest local intersection plane boundary vectors
-                                    const dx = halfX - Math.abs(localPlayerPos.x);
-                                    const dz = halfZ - Math.abs(localPlayerPos.z);
-                                    
-                                    if (dx < dz) {
-                                        localPlayerPos.x += Math.sign(localPlayerPos.x) * dx;
+                                    // Pushes vectors horizontally off surface limits securely
+                                    let overlapX = Math.min(maxX - nextX, nextX - minX);
+                                    let overlapZ = Math.min(maxZ - nextZ, nextZ - minZ);
+                                    if (overlapX < overlapZ) {
+                                        nextX += (nextX > b.x) ? overlapX : -overlapX;
                                     } else {
-                                        localPlayerPos.z += Math.sign(localPlayerPos.z) * dz;
+                                        nextZ += (nextZ > b.z) ? overlapZ : -overlapZ;
                                     }
-                                    
-                                    const worldCorrected = localPlayerPos.clone().applyMatrix4(visualMesh.matrixWorld);
-                                    nextX = worldCorrected.x;
-                                    nextZ = worldCorrected.z;
-                                    
                                     mobileTargetDestination = null;
                                     touchIndicatorRing.visible = false;
-                                    
-                                    // Keep pre-allocated loop variables synchronized dynamically
-                                    playerPos.x = nextX;
-                                    playerPos.z = nextZ;
                                 }
                             }
                         }
                     });
 
-                    // Flush calculations out to persistent engine models safely
                     inWater = currentlyInWater;
                     localData.isSubmerged = inWater;
                     isClimbing = touchingLadder && (keys['w'] || keys['arrowup'] || keys['s'] || keys['arrowdown'] || mobileTargetDestination !== null || keys[' ']);
@@ -1564,6 +1525,14 @@
                     if(headNode) headNode.visible = true; if(torsoNode) torsoNode.visible = true;
                 }
             }
+
+            // Keep all active tracking text annotations locked overhead cleanly
+            blockMap.forEach((group) => {
+                if (group.userData && group.userData.attachedTextSprite) {
+                    group.userData.attachedTextSprite.position.set(group.position.x, group.position.y + (group.children[0]?.scale.y || 1) / 2 + 0.95, group.position.z);
+                    group.userData.attachedTextSprite.lookAt(camera.position);
+                }
+            });
 
             Object.keys(playerMeshes).forEach(id => {
                 const targetPool = gameInitialized ? remotePlayers : {};
