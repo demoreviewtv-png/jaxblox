@@ -82,6 +82,11 @@
         }
         .dashboard-btn:hover { background: #4a4a4a; }
 
+        /* Pointer Lock Status Bar */
+        #lock-indicator {
+            color: #aaaaaa; font-size: 0.8rem; align-self: center; margin-right: 10px;
+        }
+
         /* Game Chat Overlay Box UI */
         #chat-window {
             position: absolute; bottom: 20px; left: 20px; width: 320px; height: 240px;
@@ -172,14 +177,15 @@
             
             <h3 style="color:#00e1ff; margin-bottom:4px;">Available API Handlers:</h3>
             <ul>
-                <li><code>player.respawn()</code> — Resets targeted character instantly to spawn location.</li>
-                <li><code>player.teleport(x, y, z)</code> — warps player coordinates instantly to specified vectors.</li>
+                <li><code>player.respawn()</code> — Resets targeted character instantly to spawn location or active checkpoint.</li>
+                <li><code>player.teleport(x, y, z)</code> — Warps player coordinates instantly to specified vectors.</li>
+                <li><code>player.setCheckpoint(x, y, z)</code> — Dynamically overrides active spawn/respawn point configurations.</li>
             </ul>
 
-            <h3 style="color:#00e1ff; margin-bottom:4px;">Example Execution Code:</h3>
+            <h3 style="color:#00e1ff; margin-bottom:4px;">Example Checkpoint Script:</h3>
             <pre>function onTouch(player) {
-  // Teleports player to the sky
-  player.teleport(0, 20, 0);
+  // Sets checkpoint to this exact block position
+  player.setCheckpoint(0, 5, 10);
 }</pre>
             
             <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:15px;" onclick="toggleGuideModal(false)">Close Guide Window</button>
@@ -188,6 +194,7 @@
 
     <div id="ui-container">
         <span id="room-indicator" style="color:#00e1ff; font-weight:bold; margin-right:10px; font-size:0.9rem; align-self:center;">ROOM: LOBBY</span>
+        <span id="lock-indicator">Click screen to lock mouse</span>
         <span id="fps-view-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none;">FIRST PERSON</span>
         <span id="water-status-indicator" style="color:#3399ff; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🌊 SWIMMING</span>
         <span id="climb-status-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🧗 CLIMBING</span>
@@ -229,6 +236,7 @@
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('water')" style="border-color:#3399ff; color:#3399ff;">🌊 Water</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500;">💺 Seat</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('ladder')" style="border-color:#ffcc00; color:#ffcc00;">🪜 Ladder</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('checkpoint')" style="border-color:#00ff66; color:#00ff66;">🏁 Checkpoint</div>
             </div>
             <div style="margin-top:8px;">
                 <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px;">Upload Custom Mesh (.glb):</label>
@@ -280,7 +288,7 @@
 
                 <div style="margin-top:5px; border-top: 1px dashed #333; padding-top:10px;">
                     <label style="font-weight:bold; color:#00ff66; display:block;">Object Code (onTouch):</label>
-                    <textarea id="p-code" class="code-editor-box" placeholder="/* API HELPER GUIDE:&#10; * player.respawn();&#10; * player.teleport(x, y, z);&#10; */&#10;function onTouch(player) {&#10;  player.respawn();&#10;}" onchange="updateSelectedProperty()"></textarea>
+                    <textarea id="p-code" class="code-editor-box" placeholder="/* API HELPER GUIDE:&#10; * player.respawn();&#10; * player.teleport(x, y, z);&#10; * player.setCheckpoint(x, y, z);&#10; */&#10;function onTouch(player) {&#10;  player.respawn();&#10;}" onchange="updateSelectedProperty()"></textarea>
                 </div>
 
                 <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:10px;" onclick="deleteSelectedPart()">Delete Selected Object</button>
@@ -337,6 +345,7 @@
         let cameraZoomDistance = 15;
         const minZoom = 0.5, maxZoom = 45;
         let cameraYaw = 0, cameraPitch = 0.6;
+        let isPointerLocked = false;
         let isRightMouseDown = false, isLeftMouseDown = false;
         let isFirstPerson = false;
         
@@ -345,6 +354,7 @@
         let touchIndicatorRing = null;
 
         let spawnPoint = { x: 0, y: 1.5, z: 0 }; 
+        let activeCheckpoint = null; 
         let draggedAssetType = "";
         let base64MeshString = ""; 
 
@@ -361,13 +371,13 @@
             canvas.width = 128; canvas.height = 128;
             const ctx = canvas.getContext('2d');
             
-            ctx.fillStyle = "#ffcc99"; ctx.fillRect(0, 0, 128, 128); // Match structural head skin tone base
+            ctx.fillStyle = "#ffcc99"; ctx.fillRect(0, 0, 128, 128); 
             ctx.fillStyle = "#111111";
             ctx.fillRect(30, 45, 14, 26); // Left Eye
             ctx.fillRect(84, 45, 14, 26); // Right Eye
 
             ctx.strokeStyle = "#111111"; ctx.lineWidth = 6; ctx.lineCap = "round";
-            ctx.beginPath(); ctx.arc(64, 75, 20, 0, Math.PI, false); ctx.stroke(); // Classic Smile Outline
+            ctx.beginPath(); ctx.arc(64, 75, 20, 0, Math.PI, false); ctx.stroke(); 
 
             faceTextureCache = new THREE.CanvasTexture(canvas);
             return faceTextureCache;
@@ -401,10 +411,27 @@
             document.getElementById('guide-modal').style.display = show ? 'flex' : 'none';
         };
 
+        // Pointer Lock Implementation API Handlers
+        function requestPointerLock() {
+            if (!gameInitialized || isStudioMode || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            renderer.domElement.requestPointerLock();
+        }
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === renderer.domElement) {
+                isPointerLocked = true;
+                document.getElementById('lock-indicator').innerText = "Mouse locked (Press ESC to unlock)";
+            } else {
+                isPointerLocked = false;
+                document.getElementById('lock-indicator').innerText = "Click screen to lock mouse";
+            }
+        });
+
         function respawnPlayer() {
-            localData.x = spawnPoint.x;
-            localData.y = spawnPoint.y + 1.5; 
-            localData.z = spawnPoint.z;
+            const targetSpawn = activeCheckpoint ? activeCheckpoint : spawnPoint;
+            localData.x = targetSpawn.x;
+            localData.y = targetSpawn.y + 1.5; 
+            localData.z = targetSpawn.z;
             localData.sittingOn = "";
             velocityY = 0;
             isGrounded = false;
@@ -461,10 +488,10 @@
                     sy: draggedAssetType==='seat'?0.6:(draggedAssetType==='ladder'?3:2), 
                     sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?0.2:2)),
                     rx: 0, ry: 0, rz: 0,
-                    color: draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":(draggedAssetType==='ladder'?"#ffcc00":"#00e1ff")), 
-                    canCollide: (draggedAssetType !== 'water' && draggedAssetType !== 'ladder'),
+                    color: draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":(draggedAssetType==='ladder'?"#ffcc00":(draggedAssetType==='checkpoint'?"#00ff66":"#00e1ff"))), 
+                    canCollide: (draggedAssetType !== 'water' && draggedAssetType !== 'ladder' && draggedAssetType !== 'checkpoint'),
                     isSpawn: false,
-                    code: "",
+                    code: draggedAssetType === 'checkpoint' ? "player.setCheckpoint(this.x, this.y, this.z);" : "",
                     meshData: base64MeshString || ""
                 });
             }
@@ -542,7 +569,6 @@
             document.getElementById('jumpout-seat-btn').style.display = 'none';
         };
 
-        // Networked Chat Operations Tray
         window.sendChatMessage = function(event) {
             event.preventDefault();
             const input = document.getElementById('chat-input');
@@ -555,6 +581,7 @@
             });
             input.value = "";
             input.blur();
+            if (!isStudioMode) requestPointerLock();
         };
 
         window.enterGame = async function() {
@@ -566,6 +593,7 @@
             localData.room = roomInput || 'lobby';
             
             isStudioMode = false;
+            activeCheckpoint = null;
             toggleFlightMode(false);
             document.getElementById('studio-sidebar').style.display = 'none';
 
@@ -597,14 +625,19 @@
                 document.getElementById('home-menu').style.display = 'none';
                 document.getElementById('ui-container').style.display = 'flex';
                 document.getElementById('chat-window').style.display = 'flex';
-                if (isStudioMode) document.getElementById('studio-sidebar').style.display = 'flex';
+                if (isStudioMode) {
+                    document.getElementById('studio-sidebar').style.display = 'flex';
+                    document.getElementById('lock-indicator').style.display = 'none';
+                } else {
+                    document.getElementById('lock-indicator').style.display = 'inline';
+                    requestPointerLock();
+                }
             }, 500);
 
             playerRef = ref(db, `players/${playerId}`);
             set(playerRef, localData);
             onDisconnect(playerRef).remove();
 
-            // Realtime Text Chat Synchronization Channel Setup
             activeRoomChatRef = ref(db, `chats/${localData.room}`);
             const cleanLogs = document.getElementById('chat-logs');
             cleanLogs.innerHTML = ""; 
@@ -673,9 +706,11 @@
 
         window.exitToHubMenu = function() {
             gameInitialized = false;
+            if(document.pointerLockElement === renderer.domElement) document.exitPointerLock();
             if(playerRef) set(playerRef, null);
             closeInspector();
             draggingBlockId = null;
+            activeCheckpoint = null;
             toggleFlightMode(false);
             mobileTargetDestination = null;
             touchIndicatorRing.visible = false;
@@ -782,6 +817,8 @@
                     let material;
                     if (b.type === 'water') {
                         material = new THREE.MeshStandardMaterial({ color: 0x3399ff, transparent: true, opacity: 0.6, roughness: 0.1 });
+                    } else if (b.type === 'checkpoint') {
+                        material = new THREE.MeshStandardMaterial({ color: 0x00ff66, transparent: true, opacity: 0.7 });
                     } else {
                         material = new THREE.MeshStandardMaterial({ color: colorHex });
                         if (b.canCollide === false) { material.transparent = true; material.opacity = 0.6; }
@@ -793,15 +830,17 @@
                 mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
                 mesh.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
 
-                mesh.userData = { blockId: key, isSeat: (b.type === 'seat'), isWater: (b.type === 'water'), isLadder: (b.type === 'ladder') };
+                mesh.userData = { blockId: key, isSeat: (b.type === 'seat'), isWater: (b.type === 'water'), isLadder: (b.type === 'ladder'), isCheckpoint: (b.type === 'checkpoint') };
                 scene.add(mesh);
                 blockMap.set(key, mesh);
 
                 let touchHandler = null;
                 if(b.code && b.code.trim().length > 0) {
                     try {
-                        touchHandler = new Function('player', `${b.code}\nif(typeof onTouch === "function") { onTouch(player); }`);
+                        touchHandler = new Function('player', `const thisBlock = {x: ${b.x}, y: ${b.y}, z: ${b.z}}; \n ${b.code}\nif(typeof onTouch === "function") { onTouch(player); }`);
                     } catch(e) { console.error("Script Compile Error:", e); }
+                } else if (b.type === 'checkpoint') {
+                    touchHandler = (player) => { player.setCheckpoint(b.x, b.y, b.z); };
                 }
 
                 blockDataArray.push({
@@ -815,7 +854,8 @@
                     isSeat: (b.type === 'seat'),
                     isWater: (b.type === 'water'),
                     isLadder: (b.type === 'ladder'),
-                    canCollide: (b.type === 'water' || b.type === 'ladder') ? false : (b.canCollide !== false),
+                    isCheckpoint: (b.type === 'checkpoint'),
+                    canCollide: (b.type === 'water' || b.type === 'ladder' || b.type === 'checkpoint') ? false : (b.canCollide !== false),
                     executeTouch: touchHandler,
                     lastExecutionTime: 0
                 });
@@ -824,6 +864,9 @@
 
         window.addEventListener('contextmenu', e => e.preventDefault());
         window.addEventListener('mousedown', e => { 
+            if (!isStudioMode && gameInitialized) {
+                requestPointerLock();
+            }
             if (e.button === 2) isRightMouseDown = true; 
             if (e.button === 0) isLeftMouseDown = true;
         });
@@ -844,6 +887,12 @@
         });
 
         window.addEventListener('mousemove', e => {
+            if (isPointerLocked && gameInitialized && !isStudioMode) {
+                cameraYaw -= e.movementX * 0.0025;
+                cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI / 2.1, cameraPitch + e.movementY * 0.0025));
+                return;
+            }
+
             if (isRightMouseDown && gameInitialized) {
                 cameraYaw -= e.movementX * 0.005;
                 cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI / 2.1, cameraPitch + e.movementY * 0.005));
@@ -1001,15 +1050,15 @@
 
             const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.5), mat); torso.position.y = 1.6; torso.name = "torso"; group.add(torso);
             
-            // Texture mapping structural system implementation for character faces
             const faceDecalMaterial = new THREE.MeshStandardMaterial({ map: generateFaceTexture(), transparent: false });
+            
             const materialsArray = [
-                skinMat, // Right
-                skinMat, // Left
-                skinMat, // Top
-                skinMat, // Bottom
-                faceDecalMaterial, // Front face mapping array node position
-                skinMat  // Back
+                skinMat,           // Right (+X)
+                skinMat,           // Left (-X)
+                skinMat,           // Top (+Y)
+                skinMat,           // Bottom (-Y)
+                faceDecalMaterial, // Front (+Z)
+                skinMat            // Back (-Z)
             ];
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), materialsArray); 
             head.position.y = 2.45; head.name = "head"; group.add(head);
@@ -1046,6 +1095,7 @@
             }
             if(e.key.toLowerCase() === 't') {
                 e.preventDefault();
+                if (document.pointerLockElement === renderer.domElement) document.exitPointerLock();
                 document.getElementById('chat-input').focus();
                 return;
             }
@@ -1116,7 +1166,7 @@
         const scriptSandboxAPI = {
             respawn: () => { respawnPlayer(); },
             teleport: (x, y, z) => { localData.x = x; localData.y = y; localData.z = z; mobileTargetDestination = null; },
-            setSpeed: (boost) => { console.log("Speed modifier active."); }
+            setCheckpoint: (x, y, z) => { activeCheckpoint = { x, y, z }; }
         };
 
         function animate() {
