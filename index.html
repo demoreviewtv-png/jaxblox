@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>JaxBlox Engine - Secure Sandbox & Scripting Layer</title>
     <style>
+        /* Base Reset & Core Sizing Rules */
+        * { box-sizing: border-box; }
         body {
             margin: 0; padding: 0; overflow: hidden;
             background: #111; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             user-select: none; -webkit-user-select: none; touch-action: none;
+            width: 100vw; height: 100vh;
         }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
@@ -20,12 +23,12 @@
             background: radial-gradient(circle, #2c3e50, #0f171e); z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: white; transition: opacity 0.5s ease;
-            overflow-y: auto; padding: 20px 0; box-sizing: border-box;
+            overflow-y: auto; padding: 20px;
         }
         #home-card {
             background: rgba(0, 0, 0, 0.85); padding: 30px; border-radius: 20px;
             border: 2px solid #00e1ff; text-align: center;
-            box-shadow: 0 0 30px rgba(0, 225, 255, 0.3); max-width: 500px; width: 90%;
+            box-shadow: 0 0 30px rgba(0, 225, 255, 0.3); max-width: 500px; width: 100%;
             position: relative;
         }
         #home-card h1 {
@@ -33,7 +36,7 @@
             text-shadow: 0 0 10px rgba(0, 225, 255, 0.5);
         }
         input.menu-input {
-            width: 85%; padding: 10px 15px; border-radius: 20px; border: 2px solid #444;
+            width: 100%; padding: 12px 15px; border-radius: 20px; border: 2px solid #444;
             background: #222; color: white; font-size: 1rem; text-align: center;
             outline: none; margin-bottom: 15px; transition: border-color 0.3s;
         }
@@ -45,7 +48,7 @@
         #play-btn {
             background: #00e1ff; color: #111; padding: 12px 50px; font-size: 1.2rem;
             font-weight: bold; border: none; border-radius: 25px; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 225, 255, 0.4); margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(0, 225, 255, 0.4); margin-top: 10px; width: 100%;
         }
         #play-btn:hover { background: #00bcd4; }
         
@@ -74,9 +77,7 @@
             padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;
             cursor: pointer; transition: background 0.2s, border-color 0.2s;
         }
-        .game-item-row:hover {
-            background: #252525; border-color: #00e1ff;
-        }
+        .game-item-row:hover { background: #252525; border-color: #00e1ff; }
         .game-item-name { color: #fff; font-weight: bold; font-size: 0.85rem; }
         .game-item-stats { color: #888; font-size: 0.75rem; font-family: monospace; }
 
@@ -84,90 +85,89 @@
         #guide-modal {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.85); z-index: 200; display: none;
-            align-items: center; justify-content: center;
+            align-items: center; justify-content: center; padding: 20px;
         }
         #guide-content {
-            background: #1e1e1e; border: 2px solid #00ff66; width: 85%; max-width: 550px;
-            padding: 25px; border-radius: 15px; color: #ddd; max-height: 75vh; overflow-y: auto;
+            background: #1e1e1e; border: 2px solid #00ff66; width: 100%; max-width: 550px;
+            padding: 25px; border-radius: 15px; color: #ddd; max-height: 80vh; overflow-y: auto;
             text-align: left; box-shadow: 0 0 25px rgba(0,255,102,0.2);
         }
         #guide-content h2 { color: #00ff66; margin-top: 0; border-bottom: 1px dashed #444; padding-bottom: 8px; }
         #guide-content code { background: #111; color: #ffcc00; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
         #guide-content pre { background: #111; color: #00ff66; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.8rem; border: 1px solid #333; }
 
-        /* Gameplay HUD Controls */
+        /* Gameplay HUD Controls - Adjusted for Roblox-styled layouts */
         #ui-container {
-            position: absolute; top: 10px; left: 10px; z-index: 10;
-            display: none; flex-wrap: wrap; gap: 10px; background: rgba(0,0,0,0.8);
-            padding: 10px 15px; border-radius: 12px; border: 1px solid #333;
-            max-width: calc(100vw - 40px);
+            position: absolute; top: 15px; left: 350px; z-index: 10;
+            display: none; flex-wrap: wrap; gap: 8px; background: rgba(0,0,0,0.6);
+            padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+            max-width: calc(100vw - 600px); align-items: center;
         }
         .dashboard-btn {
-            padding: 8px 14px; border: none; border-radius: 6px;
-            font-weight: bold; color: white; cursor: pointer; background: #3a3a3a;
+            padding: 6px 12px; border: none; border-radius: 4px;
+            font-weight: bold; color: white; cursor: pointer; background: #3a3a3a; font-size: 0.8rem;
         }
         .dashboard-btn:hover { background: #4a4a4a; }
-
-        /* Pointer Lock Status Bar */
-        #lock-indicator {
-            color: #aaaaaa; font-size: 0.8rem; align-self: center; margin-right: 10px;
-        }
+        #lock-indicator { color: #aaaaaa; font-size: 0.75rem; margin-right: 5px; }
 
         /* Room Data Stats Overlay */
         #room-stats-panel {
-            position: absolute; top: 10px; right: 10px; z-index: 10;
-            display: none; flex-direction: column; background: rgba(0, 0, 0, 0.8);
-            padding: 12px 16px; border-radius: 12px; border: 1px solid #00e1ff;
-            color: #fff; width: 180px; box-shadow: 0 0 15px rgba(0, 225, 255, 0.2);
+            position: absolute; top: 280px; right: 15px; z-index: 10;
+            display: none; flex-direction: column; background: rgba(0, 0, 0, 0.6);
+            padding: 10px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);
+            color: #fff; width: 180px; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
-        .stat-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 0.85rem; }
+        .stat-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 0.8rem; }
         .stat-val { font-weight: bold; color: #ffcc00; }
 
-        /* Game Chat Overlay Box UI */
+        /* Classic Roblox Embedded Chat Top-Left Placement */
         #chat-window {
-            position: absolute; bottom: 20px; left: 20px; width: 320px; height: 180px;
-            background: rgba(0, 0, 0, 0.7); border: 1px solid #444; border-radius: 10px;
-            display: none; flex-direction: column; z-index: 15; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            position: absolute; top: 15px; left: 15px; width: 320px; height: 200px;
+            background: rgba(0, 0, 0, 0.45); border-radius: 4px;
+            display: none; flex-direction: column; z-index: 15;
         }
         #chat-logs {
-            flex: 1; padding: 10px; overflow-y: auto; color: #fff; font-size: 0.85rem;
-            display: flex; flex-direction: column; gap: 4px; font-family: sans-serif;
+            flex: 1; padding: 8px; overflow-y: auto; color: #fff; font-size: 0.85rem;
+            display: flex; flex-direction: column; gap: 3px; font-family: sans-serif;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
         }
-        .chat-msg { line-height: 1.3; word-break: break-all; }
-        .chat-tag { color: #00e1ff; font-weight: bold; }
-        #chat-form { display: flex; border-top: 1px solid #444; background: #111; border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
+        .chat-msg { line-height: 1.25; word-break: break-all; }
+        .chat-tag { color: #ffcc00; font-weight: bold; margin-right: 4px; }
+        #chat-form { display: flex; background: rgba(0,0,0,0.6); border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
         #chat-input {
-            flex: 1; background: transparent; border: none; padding: 8px 12px;
+            flex: 1; background: transparent; border: none; padding: 8px;
             color: #fff; font-size: 0.85rem; outline: none;
         }
 
+        /* Dynamic Iconic Roblox Leaderboard List (Top Right) */
+        #roblox-player-list {
+            position: absolute; top: 15px; right: 15px; width: 220px;
+            max-height: 240px; background: rgba(0, 0, 0, 0.5); border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05); z-index: 15;
+            display: none; flex-direction: column; overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .player-list-header {
+            background: rgba(0, 0, 0, 0.4); padding: 6px 10px; font-weight: bold;
+            color: #fff; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between;
+        }
+        .player-list-scroll { overflow-y: auto; flex: 1; display: flex; flex-direction: column; }
+        .player-list-entry {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 10px; font-size: 0.8rem; color: #fff;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .player-list-entry:hover { background: rgba(255,255,255,0.05); }
+        .player-badge-dev { color: #ff3b30; font-weight: bold; font-size: 0.7rem; margin-left: 4px; }
+
         /* Mobile Controls Styling */
-        #mobile-hud {
-            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 5; pointer-events: none; display: none;
-        }
-        .mobile-zone {
-            pointer-events: auto; position: absolute;
-        }
-        #joystick-container {
-            bottom: 40px; left: 40px; width: 120px; height: 120px;
-            background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        }
-        #joystick-knob {
-            width: 50px; height: 50px; background: rgba(0, 225, 255, 0.7);
-            border-radius: 50%; box-shadow: 0 0 10px rgba(0, 225, 255, 0.8);
-            transition: transform 0.05s linear;
-        }
-        #mobile-jump-btn {
-            bottom: 50px; right: 40px; width: 75px; height: 75px;
-            background: rgba(255, 255, 255, 0.2); border: 3px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: bold; font-size: 1.1rem; text-shadow: 0 1px 3px black;
-        }
-        #mobile-jump-btn:active {
-            background: rgba(0, 225, 255, 0.4); border-color: #00e1ff;
-        }
+        #mobile-hud { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; pointer-events: none; display: none; }
+        .mobile-zone { pointer-events: auto; position: absolute; }
+        #joystick-container { bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        #joystick-knob { width: 50px; height: 50px; background: rgba(0, 225, 255, 0.7); border-radius: 50%; box-shadow: 0 0 10px rgba(0, 225, 255, 0.8); transition: transform 0.05s linear; }
+        #mobile-jump-btn { bottom: 50px; right: 40px; width: 75px; height: 75px; background: rgba(255, 255, 255, 0.2); border: 3px solid rgba(255, 255, 255, 0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.1rem; text-shadow: 0 1px 3px black; }
+        #mobile-jump-btn:active { background: rgba(0, 225, 255, 0.4); border-color: #00e1ff; }
 
         /* Studio Editor Sidebar Layouts */
         #studio-sidebar {
@@ -178,37 +178,16 @@
         }
         .sidebar-section { border-bottom: 1px solid #333; padding: 12px; }
         .sidebar-title { color: #00e1ff; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        
         .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 5px; max-height: 220px; overflow-y: auto; padding-right: 2px; }
-        .tray-item {
-            background: #2a2a2a; border: 1px dashed #555; border-radius: 6px;
-            padding: 8px; text-align: center; cursor: grab; color: #fff; font-weight: bold; font-size: 0.75rem;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
+        .tray-item { background: #2a2a2a; border: 1px dashed #555; border-radius: 6px; padding: 8px; text-align: center; cursor: grab; color: #fff; font-weight: bold; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .tray-item:active { cursor: grabbing; background: #333; }
-        
         .prop-grid { display: grid; grid-template-columns: 50px 1fr; gap: 8px; align-items: center; margin-bottom: 5px; }
         .prop-grid label { color: #aaa; font-weight: bold; }
         .prop-inputs { display: flex; gap: 4px; }
-        .prop-inputs input {
-            width: 100%; background: #2b2b2b; border: 1px solid #444; border-radius: 4px;
-            color: #fff; padding: 4px; text-align: center; font-size: 0.8rem;
-        }
-        
-        .toggle-container {
-            display: flex; justify-content: space-between; align-items: center; 
-            background: #2a2a2a; padding: 8px; border-radius: 6px; margin-top: 5px;
-        }
-
-        .code-editor-box {
-            width: 93%; height: 90px; background: #111; color: #00ff66;
-            font-family: monospace; font-size: 11px; border: 1px solid #444;
-            border-radius: 6px; padding: 6px; resize: none; margin-top: 5px; outline: none;
-        }
-
-        .rig-slider-group {
-            background: #252525; padding: 8px; border-radius: 6px; margin-top: 4px; border: 1px solid #444;
-        }
+        .prop-inputs input { width: 100%; background: #2b2b2b; border: 1px solid #444; border-radius: 4px; color: #fff; padding: 4px; text-align: center; font-size: 0.8rem; }
+        .toggle-container { display: flex; justify-content: space-between; align-items: center; background: #2a2a2a; padding: 8px; border-radius: 6px; margin-top: 5px; }
+        .code-editor-box { width: 93%; height: 90px; background: #111; color: #00ff66; font-family: monospace; font-size: 11px; border: 1px solid #444; border-radius: 6px; padding: 6px; resize: none; margin-top: 5px; outline: none; }
+        .rig-slider-group { background: #252525; padding: 8px; border-radius: 6px; margin-top: 4px; border: 1px solid #444; }
         .rig-slider-group label { display: block; font-size: 11px; color: #00e1ff; margin-bottom: 2px; font-weight: bold; }
         .rig-slider-group input { width: 100%; }
     </style>
@@ -233,7 +212,7 @@
                 <input type="text" id="search-room-input" class="menu-input" style="width:90%; margin-bottom:0;" placeholder="Room Code (lobby, obby)">
             </div>
             <div class="search-container" style="background: rgba(255, 0, 85, 0.05); border: 1px dashed rgba(255, 0, 85, 0.3);">
-                <input type="password" id="admin-pass-input" class="menu-input" style="width:90%; margin-bottom:0;" placeholder="Editor Password (Leave blank for player mode)">
+                <input type="password" id="admin-pass-input" class="menu-input" style="width:90%; margin-bottom:0;" placeholder="Editor Password (Type 'edit' or leave blank)">
             </div>
             <button id="play-btn" onclick="enterGame()">LAUNCH WORLD</button>
             
@@ -246,7 +225,6 @@
                     <div style="color: #777; font-style: italic; font-size: 0.8rem; text-align: center; padding: 10px 0;">Scanning directory for public games...</div>
                 </div>
             </div>
-
             <br>
             <button class="help-menu-btn" onclick="toggleGuideModal(true)">📖 SCRIPTING GUIDE</button>
         </div>
@@ -256,21 +234,33 @@
         <div id="guide-content">
             <h2>JaxBlox Scripting Guide</h2>
             <p>Objects process custom JavaScript hooks automatically upon player contact. Code blocks must implement an <code>onTouch(player)</code> structure.</p>
-            
             <h3 style="color:#00e1ff; margin-bottom:4px;">Available API Handlers:</h3>
             <ul>
                 <li><code>player.respawn()</code> — Resets targeted character instantly to spawn location or active checkpoint.</li>
                 <li><code>player.teleport(x, y, z)</code> — Warps player coordinates instantly to specified vectors.</li>
                 <li><code>player.setCheckpoint(x, y, z)</code> — Dynamically overrides active spawn/respawn point configurations.</li>
             </ul>
-
             <h3 style="color:#00e1ff; margin-bottom:4px;">Example Checkpoint Script:</h3>
             <pre>function onTouch(player) {
   player.setCheckpoint(0, 5, 10);
 }</pre>
-            
             <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:15px;" onclick="toggleGuideModal(false)">Close Guide Window</button>
         </div>
+    </div>
+
+    <div id="chat-window">
+        <div id="chat-logs"></div>
+        <form id="chat-form" onsubmit="sendChatMessage(event)">
+            <input type="text" id="chat-input" placeholder="To chat click here or press Enter..." maxlength="60" autocomplete="off">
+        </form>
+    </div>
+
+    <div id="roblox-player-list">
+        <div class="player-list-header">
+            <span>Players</span>
+            <span id="player-list-count">0</span>
+        </div>
+        <div class="player-list-scroll" id="player-list-entries"></div>
     </div>
 
     <div id="ui-container">
@@ -298,17 +288,8 @@
     </div>
 
     <div id="mobile-hud">
-        <div id="joystick-container" class="mobile-zone">
-            <div id="joystick-knob"></div>
-        </div>
+        <div id="joystick-container" class="mobile-zone"><div id="joystick-knob"></div></div>
         <div id="mobile-jump-btn" class="mobile-zone">JUMP</div>
-    </div>
-
-    <div id="chat-window">
-        <div id="chat-logs"></div>
-        <form id="chat-form" onsubmit="sendChatMessage(event)">
-            <input type="text" id="chat-input" placeholder="Type chat message here... (Press Enter)" maxlength="60" autocomplete="off">
-        </form>
     </div>
 
     <div id="studio-sidebar">
@@ -564,40 +545,58 @@
 
                 Object.keys(mapsData).forEach(roomKey => {
                     const roomConfig = mapsData[roomKey].config || {};
-                    if (roomConfig.isPublic === true) {
+                    if (roomConfig.isPublic) {
                         hasRooms = true;
-                        const blocksObj = mapsData[roomKey].blocks || {};
-                        const blocksCount = Object.keys(blocksObj).length;
-                        
                         const row = document.createElement('div');
                         row.className = "game-item-row";
-                        row.onclick = () => window.selectPublishedRoom(roomKey);
+                        row.onclick = () => selectPublishedRoom(roomKey);
 
+                        const countBlocks = mapsData[roomKey].blocks ? Object.keys(mapsData[roomKey].blocks).length : 0;
                         row.innerHTML = `
                             <span class="game-item-name">🎮 Room: ${roomKey.toUpperCase()}</span>
-                            <span class="game-item-stats">${blocksCount} objects</span>
+                            <span class="game-item-stats">[Blocks: ${countBlocks}]</span>
                         `;
                         scrollBox.appendChild(row);
                     }
                 });
 
-                if(!hasRooms) {
-                    scrollBox.innerHTML = `<div style="color:#777; font-size:0.8rem; text-align:center; padding:10px 0;">No maps are currently marked as public.</div>`;
+                if (!hasRooms) {
+                    scrollBox.innerHTML = `<div style="color:#888; font-size:0.8rem; text-align:center; padding:10px 0;">No matching rooms marked public.</div>`;
                 }
             });
         }
-        
         startPublishedGamesListener();
 
         window.toggleGuideModal = function(show) {
             document.getElementById('guide-modal').style.display = show ? 'flex' : 'none';
         };
 
+        const gridHelper = new THREE.GridHelper(200, 200, 0x00e1ff, 0x444444);
+        gridHelper.position.y = 0.01;
+        scene.add(gridHelper);
+
+        const localVisualModel = createLocalCharacterMesh();
+
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            keys[key] = true;
+            if (key === ' ' && isGrounded && gameInitialized && !localData.sittingOn && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                velocityY = 11.5;
+                isGrounded = false;
+            }
+            if (key === 'f' && isStudioMode && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                toggleFlightMode(!isFlying);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
         function requestPointerLock() {
-            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) return;
-            if (!gameInitialized || isStudioMode || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
-            renderer.domElement.requestPointerLock();
+            if (!isStudioMode && gameInitialized) {
+                renderer.domElement.requestPointerLock();
+            }
         }
+        renderer.domElement.addEventListener('click', requestPointerLock);
 
         document.addEventListener('pointerlockchange', () => {
             if (document.pointerLockElement === renderer.domElement) {
@@ -612,7 +611,7 @@
         function respawnPlayer() {
             const targetSpawn = activeCheckpoint ? activeCheckpoint : spawnPoint;
             localData.x = targetSpawn.x;
-            localData.y = targetSpawn.y + 1.5; 
+            localData.y = targetSpawn.y + 1.5;
             localData.z = targetSpawn.z;
             localData.sittingOn = "";
             velocityY = 0;
@@ -629,14 +628,14 @@
         window.toggleFlightMode = function(state) {
             if(!isStudioMode) return;
             isFlying = state;
-            velocityY = 0; 
+            velocityY = 0;
             document.getElementById('studio-fly-toggle').checked = state;
             document.getElementById('fly-status-indicator').style.display = state ? 'block' : 'none';
         };
 
-        window.setDragAsset = function(type) { 
+        window.setDragAsset = function(type) {
             if(!isStudioMode) return;
-            draggedAssetType = type; 
+            draggedAssetType = type;
         };
 
         document.getElementById('bgm-uploader').addEventListener('change', function(e) {
@@ -663,33 +662,74 @@
             reader.readAsDataURL(file);
         });
 
-        /* --- MOBILE HUD TOUCH LAYERS --- */
+        window.addEventListener('dragover', (e) => { e.preventDefault(); });
+        window.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (!isStudioMode || !draggedAssetType) return;
+
+            const mouse = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            const intersection = new THREE.Vector3();
+            raycaster.ray.intersectPlane(plane, intersection);
+
+            if (intersection) {
+                const blockId = "block_" + Math.random().toString(36).substr(2, 9);
+                const newBlock = {
+                    id: blockId,
+                    type: draggedAssetType,
+                    x: parseFloat(intersection.x.toFixed(1)),
+                    y: draggedAssetType === 'water' ? 0.2 : 0.5,
+                    z: parseFloat(intersection.z.toFixed(1)),
+                    sx: draggedAssetType === 'water' ? 10 : (draggedAssetType === 'checkpoint' ? 3 : 1),
+                    sy: draggedAssetType === 'water' ? 0.4 : 1,
+                    sz: draggedAssetType === 'water' ? 10 : (draggedAssetType === 'checkpoint' ? 3 : 1),
+                    color: draggedAssetType === 'water' ? "#3399ff" : (draggedAssetType === 'checkpoint' ? "#00ff66" : "#aaaaaa"),
+                    canCollide: draggedAssetType !== 'water' && draggedAssetType !== 'ladder',
+                    isPhysical: false,
+                    isSpawn: false,
+                    code: ""
+                };
+                if (draggedAssetType === 'brick' && base64MeshString) {
+                    newBlock.meshData = base64MeshString;
+                }
+                set(ref(db, `maps/${localData.room}/blocks/${blockId}`), newBlock);
+            }
+            draggedAssetType = "";
+        });
+
+        const mobileJoystickZone = document.getElementById('joystick-container');
         const joystickKnob = document.getElementById('joystick-knob');
-        const joystickContainer = document.getElementById('joystick-container');
         const mobileJumpBtn = document.getElementById('mobile-jump-btn');
 
+        if ('ontouchstart' in window) {
+            document.getElementById('mobile-hud').style.display = 'block';
+        }
+
         window.addEventListener('touchstart', (e) => {
-            if (!gameInitialized) return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
-                if (touch.clientX < window.innerWidth / 2 && touchMoveId === null) {
-                    // Check if clicked inside or near joystick container boundaries
-                    const rect = joystickContainer.getBoundingClientRect();
+                const target = touch.target;
+                if (target.closest('#joystick-container')) {
                     touchMoveId = touch.identifier;
+                    const rect = mobileJoystickZone.getBoundingClientRect();
                     joystickStart.x = rect.left + rect.width / 2;
                     joystickStart.y = rect.top + rect.height / 2;
-                } else if (touch.clientX >= window.innerWidth / 2 && touchLookId === null) {
-                    if (e.target === mobileJumpBtn) continue;
-                    touchLookId = touch.identifier;
-                    lastTouchLookPos.x = touch.clientX;
-                    lastTouchLookPos.y = touch.clientY;
+                } else if (!target.closest('#studio-sidebar') && !target.closest('#ui-container') && !target.closest('#chat-window') && !target.closest('#home-menu') && !target.closest('#mobile-jump-btn') && !target.closest('#roblox-player-list')) {
+                    if (touchLookId === null) {
+                        touchLookId = touch.identifier;
+                        lastTouchLookPos.x = touch.clientX;
+                        lastTouchLookPos.y = touch.clientY;
+                    }
                 }
             }
         }, { passive: true });
 
         window.addEventListener('touchmove', (e) => {
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                const touch = e.changedTouches[i];
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
                 if (touch.identifier === touchMoveId) {
                     let dx = touch.clientX - joystickStart.x;
                     let dy = touch.clientY - joystickStart.y;
@@ -739,163 +779,178 @@
 
         function createLocalCharacterMesh() {
             const group = new THREE.Group();
-            
             const headGeom = new THREE.BoxGeometry(0.6, 0.6, 0.6);
             const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
             const head = new THREE.Mesh(headGeom, headMat);
             head.position.y = 1.3;
             group.add(head);
-
             const torsoGeom = new THREE.BoxGeometry(0.8, 1.0, 0.4);
             const torsoMat = new THREE.MeshStandardMaterial({ color: localData.color });
             const torso = new THREE.Mesh(torsoGeom, torsoMat);
             torso.position.y = 0.5;
             group.add(torso);
-
-            const limbMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-            
-            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.9, 0.25), torsoMat);
-            lArm.position.set(-0.55, 0.55, 0);
+            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torsoMat);
+            lArm.position.set(-0.55,0.55,0);
             group.add(lArm);
-            
-            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.9, 0.25), torsoMat);
-            rArm.position.set(0.55, 0.55, 0);
+            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torsoMat);
+            rArm.position.set(0.55,0.55,0);
             group.add(rArm);
-
-            const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.9, 0.28), limbMat);
-            lLeg.position.set(-0.22, -0.45, 0);
+            const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+            lLeg.position.set(-0.22,-0.45,0);
             group.add(lLeg);
-
-            const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.9, 0.28), limbMat);
-            rLeg.position.set(0.22, -0.45, 0);
+            const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), lLeg.material);
+            rLeg.position.set(0.22,-0.45,0);
             group.add(rLeg);
-
-            group.position.set(localData.x, localData.y, localData.z);
             scene.add(group);
-            return { root: group, lArm, rArm, lLeg, rLeg, head, torso };
-        }
-
-        let localVisualModel = createLocalCharacterMesh();
-
-        function createRemotePlayerMesh(data) {
-            const group = new THREE.Group();
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.6), new THREE.MeshStandardMaterial({ color: 0xffdbac }));
-            head.position.y = 1.3; group.add(head);
-
-            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8,1.0,0.4), new THREE.MeshStandardMaterial({ color: data.color || 0x00e1ff }));
-            torso.position.y = 0.5; group.add(torso);
-
-            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torso.material); lArm.position.set(-0.55,0.55,0); group.add(lArm);
-            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torso.material); rArm.position.set(0.55,0.55,0); group.add(rArm);
-            const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), new THREE.MeshStandardMaterial({ color: 0x333333 })); lLeg.position.set(-0.22,-0.45,0); group.add(lLeg);
-            const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), lLeg.material); rLeg.position.set(0.22,-0.45,0); group.add(rLeg);
-
-            const canvas = document.createElement('canvas');
-            canvas.width = 256; canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,256,64);
-            ctx.font = '24px Arial'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
-            ctx.fillText(data.username || "Guest", 128, 40);
-            const txtTex = new THREE.CanvasTexture(canvas);
-            const nameplate = new THREE.Mesh(new THREE.PlaneGeometry(2, 0.5), new THREE.MeshBasicMaterial({ map: txtTex, transparent: true, side: THREE.DoubleSide }));
-            nameplate.position.y = 2.0; group.add(nameplate);
-
-            scene.add(group);
-            return { root: group, lArm, rArm, lLeg, rLeg, nameplate };
+            return { root: group, head, torso, lArm, rArm, lLeg, rLeg };
         }
 
         window.enterGame = function() {
             let userIn = document.getElementById('username-input').value.trim();
             let roomIn = document.getElementById('search-room-input').value.trim().toLowerCase();
-            let adminPass = document.getElementById('admin-pass-input').value;
+            let adminPass = document.getElementById('admin-pass-input').value.trim();
 
             if(!userIn) userIn = "Guest" + Math.floor(Math.random()*900);
             if(!roomIn) roomIn = "lobby";
 
             localData.username = userIn;
             localData.room = roomIn;
-            
             localVisualModel.torso.material.color.setHex(localData.color);
-
             document.getElementById('room-indicator').innerText = "ROOM: " + roomIn.toUpperCase();
 
-            // Detect admin passcode layer match
-            if(adminPass === "matrixadmin99") {
+            // Secure Admin & Editor Verification Filter
+            if(adminPass !== "" && (adminPass === "matrixadmin99" || adminPass.toLowerCase() === "edit" || adminPass.toLowerCase() === roomIn)) {
                 isStudioMode = true;
                 document.getElementById('studio-sidebar').style.display = 'flex';
                 document.getElementById('lock-indicator').style.display = 'none';
             } else {
                 isStudioMode = false;
                 document.getElementById('studio-sidebar').style.display = 'none';
-                document.getElementById('lock-indicator').style.display = 'block';
+                document.getElementById('lock-indicator').style.display = 'inline';
             }
 
-            document.getElementById('home-menu').style.opacity = '0';
+            document.getElementById('home-menu').style.opacity = 0;
             setTimeout(() => { document.getElementById('home-menu').style.display = 'none'; }, 500);
 
-            document.getElementById('ui-container').style.display = 'flex';
-            document.getElementById('room-stats-panel').style.display = 'flex';
             document.getElementById('chat-window').style.display = 'flex';
-            
-            // Check if device is mobile to activate touch joysticks UI overlay layout
-            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                document.getElementById('mobile-hud').style.display = 'block';
-                document.getElementById('lock-indicator').style.display = 'none';
-            }
+            document.getElementById('roblox-player-list').style.display = 'flex';
+            document.getElementById('room-stats-panel').style.display = 'flex';
+            document.getElementById('ui-container').style.display = 'flex';
 
             playerRef = ref(db, `rooms/${roomIn}/players/${playerId}`);
             activeRoomBlocksRef = ref(db, `maps/${roomIn}/blocks`);
-            activeRoomChatRef = ref(db, `rooms/${roomIn}/chats`);
+            activeRoomChatRef = ref(db, `rooms/${roomIn}/messages`);
 
             set(playerRef, localData);
             onDisconnect(playerRef).remove();
 
-            // Establish listener matrices for other characters
-            onValue(ref(db, `rooms/${roomIn}/players`), (snapshot) => {
-                const data = snapshot.val() || {};
-                document.getElementById('stat-players-count').innerText = Object.keys(data).length;
-                
-                Object.keys(remotePlayers).forEach(id => {
-                    if (!data[id]) {
-                        scene.remove(remotePlayers[id].mesh.root);
-                        delete remotePlayers[id];
-                    }
-                });
-
-                Object.keys(data).forEach(id => {
-                    if (id === playerId) return;
-                    if (!remotePlayers[id]) {
-                        remotePlayers[id] = { data: data[id], mesh: createRemotePlayerMesh(data[id]) };
-                    } else {
-                        remotePlayers[id].data = data[id];
-                    }
-                });
-            });
-
-            // Sync structural design parts list
-            onValue(activeRoomBlocksRef, (snapshot) => {
-                const blocksData = snapshot.val() || {};
-                currentRoomBlocks = blocksData;
-                document.getElementById('stat-shapes-count').innerText = Object.keys(blocksData).length;
-                rebuildSceneBlocks(blocksData);
-            });
-
-            // Sync global layout rules configs
+            // Synced Global Room Configuration Matrix Channel
             onValue(ref(db, `maps/${roomIn}/config`), (snapshot) => {
-                const config = snapshot.val() || {};
-                globalRoomConfig.playersCollide = !!config.playersCollide;
-                globalRoomConfig.isPublic = !!config.isPublic;
-                document.getElementById('room-players-collide').checked = globalRoomConfig.playersCollide;
-                document.getElementById('room-public-toggle').checked = globalRoomConfig.isPublic;
-
-                if (config.audioTrack) {
-                    if(bgAudioElement.src !== config.audioTrack) {
-                        bgAudioElement.src = config.audioTrack;
-                        if(!audioMuted) bgAudioElement.play().catch(()=>{});
+                if (snapshot.exists()) {
+                    globalRoomConfig = snapshot.val();
+                    if(globalRoomConfig.audioTrack) {
+                        if(bgAudioElement.src !== globalRoomConfig.audioTrack) {
+                            bgAudioElement.src = globalRoomConfig.audioTrack;
+                            if(!audioMuted) bgAudioElement.play().catch(()=>{});
+                        }
                     }
+                    document.getElementById('room-players-collide').checked = !!globalRoomConfig.playersCollide;
+                    document.getElementById('room-public-toggle').checked = !!globalRoomConfig.isPublic;
+                }
+            });
+
+            // Standard Core Multiplayer Synchronization Thread Map Loops
+            onValue(ref(db, `rooms/${roomIn}/players`), (snapshot) => {
+                const listContainer = document.getElementById('player-list-entries');
+                const countBadge = document.getElementById('player-list-count');
+                if(listContainer) listContainer.innerHTML = "";
+
+                if (snapshot.exists()) {
+                    const players = snapshot.val();
+                    const keysList = Object.keys(players);
+                    if(countBadge) countBadge.innerText = keysList.length;
+                    document.getElementById('stat-players-count').innerText = keysList.length;
+
+                    // Remove dropped avatars
+                    Object.keys(remotePlayers).forEach(pId => {
+                        if (!players[pId]) {
+                            scene.remove(remotePlayers[pId].mesh.root);
+                            delete remotePlayers[pId];
+                        }
+                    });
+
+                    keysList.forEach(pId => {
+                        const data = players[pId];
+                        
+                        // Self-Updating List Row
+                        if (listContainer) {
+                            const row = document.createElement('div');
+                            row.className = "player-list-entry";
+                            let devBadge = pId === playerId ? (isStudioMode ? `<span class="player-badge-dev">[Dev]</span>` : "") : "";
+                            row.innerHTML = `<span>${escapeHTML(data.username)}${devBadge}</span>`;
+                            listContainer.appendChild(row);
+                        }
+
+                        if (pId === playerId) return;
+
+                        if (!remotePlayers[pId]) {
+                            remotePlayers[pId] = { data: data, mesh: createRemoteCharacterMesh(data) };
+                        } else {
+                            remotePlayers[pId].data = data;
+                            remotePlayers[pId].mesh.root.position.set(data.x, data.y, data.z);
+                            remotePlayers[pId].mesh.root.rotation.y = data.rotY || 0;
+                            remotePlayers[pId].mesh.torso.material.color.setHex(data.color || 0xffffff);
+                        }
+                    });
                 } else {
-                    bgAudioElement.pause();
-                    bgAudioElement.src = "";
+                    if(countBadge) countBadge.innerText = "0";
+                }
+            });
+
+            // Map Environment Synchronizer Vector Engine Thread Channel
+            onValue(activeRoomBlocksRef, (snapshot) => {
+                const data = snapshot.val() || {};
+                currentRoomBlocks = data;
+                document.getElementById('stat-shapes-count').innerText = Object.keys(data).length;
+
+                // Delete items removed from DB
+                blockMap.forEach((mesh, bId) => {
+                    if (!data[bId]) {
+                        scene.remove(mesh);
+                        blockMap.delete(mesh);
+                    }
+                });
+
+                blockDataArray = [];
+                Object.keys(data).forEach(bId => {
+                    const b = data[bId];
+                    blockDataArray.push(b);
+                    if (!blockMap.has(bId) && !hiddenBlocks[bId]) {
+                        buildSceneObjectFromDatabaseRow(b);
+                    } else if (blockMap.has(bId)) {
+                        const m = blockMap.get(bId);
+                        m.position.set(b.x, b.y, b.z);
+                        m.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
+                        m.rotation.set((b.rx || 0)*Math.PI/180, (b.ry || 0)*Math.PI/180, (b.rz || 0)*Math.PI/180);
+                        if(b.type !== 'water' && b.type !== 'ladder' && b.type !== 'anim_rig') {
+                            m.material.color.set(b.color || "#aaaaaa");
+                        }
+                        if (b.type === 'anim_rig') {
+                            if(m.headMesh) m.headMesh.rotation.y = (b.rigHead || 0) * Math.PI/180;
+                            if(m.lArmMesh) m.lArmMesh.rotation.x = (b.rigLarm || 0) * Math.PI/180;
+                            if(m.rArmMesh) m.rArmMesh.rotation.x = (b.rigRarm || 0) * Math.PI/180;
+                            if(m.lLegMesh) m.lLegMesh.rotation.x = (b.rigLleg || 0) * Math.PI/180;
+                            if(m.rLegMesh) m.rLegMesh.rotation.x = (b.rigRleg || 0) * Math.PI/180;
+                        }
+                    }
+                });
+
+                // Set initial spawn coordinates if marked
+                const foundSpawn = blockDataArray.find(b => b.isSpawn);
+                if(foundSpawn) {
+                    spawnPoint = { x: foundSpawn.x, y: foundSpawn.y + (foundSpawn.sy||1)/2 + 0.5, z: foundSpawn.z };
+                } else {
+                    spawnPoint = { x: 0, y: 1.5, z: 0 };
                 }
             });
 
@@ -908,7 +963,7 @@
                     const c = chats[k];
                     const row = document.createElement('div');
                     row.className = "chat-msg";
-                    row.innerHTML = `<span class="chat-tag">[${c.user}]:</span> ${escapeHTML(c.text)}`;
+                    row.innerHTML = `<span class="chat-tag">${escapeHTML(c.user)}:</span> ${escapeHTML(c.text)}`;
                     logs.appendChild(row);
                 });
                 logs.scrollTop = logs.scrollHeight;
@@ -967,171 +1022,178 @@
 
         window.jumpOutSeat = function() {
             if(!localData.sittingOn) return;
-            const seatObj = currentRoomBlocks[localData.sittingOn];
+            const seatId = localData.sittingOn;
             localData.sittingOn = "";
+            localData.y += 1.2;
             document.getElementById('jumpout-seat-btn').style.display = 'none';
-            if(seatObj) {
-                localData.y = seatObj.y + (seatObj.sy || 1) / 2 + 1.5;
-                localData.z = seatObj.z + (seatObj.sz || 1);
-            }
-            velocityY = 6;
             if(playerRef) set(playerRef, localData);
+            
+            // Temporary trigger disable to safely clear bounding box clearance
+            hiddenBlocks[seatId] = true;
+            setTimeout(() => { delete hiddenBlocks[seatId]; }, 1200);
         };
 
-        window.exitToHubMenu = function() {
-            bgAudioElement.pause();
-            bgAudioElement.src = "";
-            if(playerRef) remove(playerRef);
-            location.reload();
-        };
+        function buildSceneObjectFromDatabaseRow(b) {
+            let geom;
+            if(b.type === 'sphere') { geom = new THREE.SphereGeometry(0.5, 16, 16); }
+            else if(b.type === 'cylinder') { geom = new THREE.CylinderGeometry(0.5, 0.5, 1, 16); }
+            else if(b.type === 'cone') { geom = new THREE.ConeGeometry(0.5, 1, 16); }
+            else if(b.type === 'torus') { geom = new THREE.TorusGeometry(0.4, 0.15, 8, 24); }
+            else if(b.type === 'capsule') { geom = new THREE.CapsuleGeometry(0.3, 0.5, 4, 12); }
+            else if(b.type === 'wedge') {
+                geom = new THREE.BufferGeometry();
+                const vertices = new Float32Array([
+                    -0.5,-0.5,-0.5,  0.5,-0.5,-0.5,  0.5,-0.5, 0.5,
+                    -0.5,-0.5,-0.5,  0.5,-0.5, 0.5, -0.5,-0.5, 0.5,
+                    -0.5,-0.5,-0.5, -0.5, 0.5,-0.5,  0.5,-0.5,-0.5,
+                     0.5,-0.5,-0.5, -0.5, 0.5,-0.5,  0.5, 0.5,-0.5,
+                    -0.5,-0.5, 0.5,  0.5,-0.5, 0.5, -0.5, 0.5,-0.5,
+                     0.5,-0.5, 0.5,  0.5, 0.5,-0.5, -0.5, 0.5,-0.5,
+                    -0.5,-0.5,-0.5, -0.5,-0.5, 0.5, -0.5, 0.5,-0.5,
+                     0.5,-0.5,-0.5,  0.5, 0.5,-0.5,  0.5,-0.5, 0.5
+                ]);
+                geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                geom.computeVertexNormals();
+            } else { geom = new THREE.BoxGeometry(1, 1, 1); }
 
-        function rebuildSceneBlocks(blocksData) {
-            blockMap.forEach((mesh) => scene.remove(mesh));
-            blockMap.clear();
-            blockDataArray = [];
+            let mat;
+            if(b.type === 'water') { mat = new THREE.MeshStandardMaterial({ color: 0x3399ff, transparent: true, opacity: 0.6, roughness: 0.1 }); }
+            else if(b.type === 'ladder') { mat = new THREE.MeshStandardMaterial({ color: 0xffcc00, wireframe: true }); }
+            else { mat = new THREE.MeshStandardMaterial({ color: b.color || 0xaaaaaa, roughness: 0.4 }); }
 
-            spawnPoint = { x: 0, y: 1.5, z: 0 };
-            let hasSpawns = false;
+            let mesh = new THREE.Mesh(geom, mat);
 
-            Object.keys(blocksData).forEach(id => {
-                const b = blocksData[id];
-                b.id = id;
-                blockDataArray.push(b);
-
-                if (hiddenBlocks[id]) return;
-
-                if (b.isSpawn) {
-                    if(!hasSpawns) {
-                        spawnPoint = { x: b.x, y: b.y + (b.sy || 1)/2 + 0.5, z: b.z };
-                        hasSpawns = true;
-                    }
-                }
-
-                let geom;
-                if (b.type === 'sphere') geom = new THREE.SphereGeometry(0.5, 24, 24);
-                else if (b.type === 'cylinder') geom = new THREE.CylinderGeometry(0.5, 0.5, 1, 24);
-                else if (b.type === 'cone') geom = new THREE.ConeGeometry(0.5, 1, 24);
-                else if (b.type === 'torus') geom = new THREE.TorusGeometry(0.4, 0.15, 12, 24);
-                else if (b.type === 'capsule') geom = new THREE.CapsuleGeometry(0.35, 0.5, 8, 16);
-                else if (b.type === 'wedge') {
-                    geom = new THREE.BufferGeometry();
-                    const vertices = new Float32Array([
-                        -0.5,-0.5,-0.5,  0.5,-0.5,-0.5,  0.5,-0.5, 0.5,
-                        -0.5,-0.5,-0.5,  0.5,-0.5, 0.5, -0.5,-0.5, 0.5,
-                        -0.5,-0.5,-0.5, -0.5, 0.5,-0.5,  0.5,-0.5,-0.5,
-                         0.5,-0.5,-0.5, -0.5, 0.5,-0.5,  0.5, 0.5,-0.5,
-                        -0.5,-0.5, 0.5,  0.5,-0.5, 0.5, -0.5, 0.5,-0.5,
-                         0.5,-0.5, 0.5,  0.5, 0.5,-0.5, -0.5, 0.5,-0.5,
-                        -0.5,-0.5,-0.5, -0.5,-0.5, 0.5, -0.5, 0.5,-0.5,
-                         0.5,-0.5,-0.5,  0.5, 0.5,-0.5,  0.5,-0.5, 0.5
-                    ]);
-                    geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-                    geom.computeVertexNormals();
-                } else {
-                    geom = new THREE.BoxGeometry(1, 1, 1);
-                }
-
-                let mat;
-                if(b.type === 'water') {
-                    mat = new THREE.MeshStandardMaterial({ color: 0x3399ff, transparent: true, opacity: 0.6, roughness: 0.1 });
-                } else if(b.type === 'ladder') {
-                    mat = new THREE.MeshStandardMaterial({ color: 0xffcc00, wireframe: true });
-                } else {
-                    mat = new THREE.MeshStandardMaterial({ color: b.color || 0xaaaaaa, roughness: 0.4 });
-                }
-
-                let mesh = new THREE.Mesh(geom, mat);
-                
-                if (b.type === 'anim_rig') {
-                    mesh = buildAnimationRigMesh(b);
-                } else if (b.meshData) {
-                    mesh = new THREE.Group();
-                    gltfLoader.parse(base64ToArrayBuffer(b.meshData.split(',')[1]), '', (gltf) => {
-                        mesh.add(gltf.scene);
-                    });
-                }
-
-                mesh.position.set(b.x, b.y, b.z);
-                mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
-                mesh.rotation.set(
-                    THREE.MathUtils.degToRad(b.rx || 0),
-                    THREE.MathUtils.degToRad(b.ry || 0),
-                    THREE.MathUtils.degToRad(b.rz || 0)
-                );
-
-                mesh.userData = { blockId: id };
-                scene.add(mesh);
-                blockMap.set(id, mesh);
-            });
-        }
-
-        function base64ToArrayBuffer(base64) {
-            const binary_string = window.atob(base64);
-            const len = binary_string.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binary_string.charCodeAt(i);
+            if (b.type === 'anim_rig') {
+                mesh = buildAnimationRigMesh(b);
+            } else if (b.meshData) {
+                gltfLoader.parse(base64ToArrayBuffer(b.meshData.split(',')[1]), '', (gltf) => {
+                    const loadedRoot = gltf.scene;
+                    loadedRoot.userData.blockId = b.id;
+                    loadedRoot.position.set(b.x, b.y, b.z);
+                    loadedRoot.scale.set(b.sx||1, b.sy||1, b.sz||1);
+                    scene.remove(mesh);
+                    scene.add(loadedRoot);
+                    blockMap.set(b.id, loadedRoot);
+                });
             }
-            return bytes.buffer;
+
+            mesh.position.set(b.x, b.y, b.z);
+            mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
+            mesh.rotation.set((b.rx || 0)*Math.PI/180, (b.ry || 0)*Math.PI/180, (b.rz || 0)*Math.PI/180);
+            mesh.userData.blockId = b.id;
+
+            scene.add(mesh);
+            blockMap.set(b.id, mesh);
         }
 
         function buildAnimationRigMesh(b) {
-            const baseGroup = new THREE.Group();
-            
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.6), new THREE.MeshStandardMaterial({color: 0xffccaa}));
-            head.position.y = 1.3;
-            head.name = "head";
-            head.rotation.y = THREE.MathUtils.degToRad(b.rigHead || 0);
-            baseGroup.add(head);
+            const container = new THREE.Group();
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+            const clothMat = new THREE.MeshStandardMaterial({ color: b.color || 0xff00e1 });
 
-            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8,1.0,0.4), new THREE.MeshStandardMaterial({color: b.color || 0xff00e1}));
-            torso.position.y = 0.5;
-            baseGroup.add(torso);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.6), skinMat); head.position.y = 1.3; container.add(head); container.headMesh = head;
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8,1.0,0.4), clothMat); torso.position.y = 0.5; container.add(torso);
+            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), clothMat); lArm.position.set(-0.55,0.55,0); container.add(lArm); container.lArmMesh = lArm;
+            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), clothMat); rArm.position.set(0.55,0.55,0); container.add(rArm); container.rArmMesh = rArm;
+            const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), new THREE.MeshStandardMaterial({ color: 0x222222 })); lLeg.position.set(-0.22,-0.45,0); container.add(lLeg); container.lLegMesh = lLeg;
+            const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), lLeg.material); rLeg.position.set(0.22,-0.45,0); container.add(rLeg); container.rLegMesh = rLeg;
 
-            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torso.material);
-            lArm.position.set(-0.55, 0.55, 0);
-            lArm.rotation.x = THREE.MathUtils.degToRad(b.rigLarm || 0);
-            baseGroup.add(lArm);
-
-            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torso.material);
-            rArm.position.set(0.55, 0.55, 0);
-            rArm.rotation.x = THREE.MathUtils.degToRad(b.rigRarm || 0);
-            baseGroup.add(rArm);
-
-            const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), new THREE.MeshStandardMaterial({color:0x222222}));
-            lLeg.position.set(-0.22, -0.45, 0);
-            lLeg.rotation.x = THREE.MathUtils.degToRad(b.rigLleg || 0);
-            baseGroup.add(lLeg);
-
-            const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), lLeg.material);
-            rLeg.position.set(0.22, -0.45, 0);
-            rLeg.rotation.x = THREE.MathUtils.degToRad(b.rigRleg || 0);
-            baseGroup.add(rLeg);
-
-            return baseGroup;
+            return container;
         }
 
-        /* Keyboard Listeners */
-        window.addEventListener('keydown', (e) => {
-            if(document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
-            keys[e.key.toLowerCase()] = true;
+        function createRemoteCharacterMesh(data) {
+            const group = new THREE.Group();
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+            const torsoMat = new THREE.MeshStandardMaterial({ color: data.color || 0xffffff });
 
-            if (e.key.toLowerCase() === 'f' && isStudioMode) {
-                toggleFlightMode(!isFlying);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.6), skinMat); head.position.y = 1.3; group.add(head);
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8,1.0,0.4), torsoMat); torso.position.y = 0.5; group.add(torso);
+            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torsoMat); lArm.position.set(-0.55,0.55,0); group.add(lArm);
+            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torsoMat); rArm.position.set(0.55,0.55,0); group.add(rArm);
+            const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), new THREE.MeshStandardMaterial({ color: 0x333333 })); lLeg.position.set(-0.22,-0.45,0); group.add(lLeg);
+            const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), lLeg.material); rLeg.position.set(0.22,-0.45,0); group.add(rLeg);
+
+            // Floating username text tags setup
+            const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 64;
+            const ctx = canvas.getContext('2d'); ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,256,64);
+            ctx.font = '24px Arial'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.fillText(data.username || "Guest", 128, 40);
+            const nameplate = new THREE.Mesh(new THREE.PlaneGeometry(2, 0.5), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, side: THREE.DoubleSide }));
+            nameplate.position.y = 2.0; group.add(nameplate);
+
+            scene.add(group);
+            return { root: group, torso, lArm, rArm, lLeg, rLeg, nameplate };
+        }
+
+        window.updateSelectedProperty = function() {
+            if(!isStudioMode || !selectedBlockId) return;
+            const updateObj = {
+                x: parseFloat(document.getElementById('p-x').value) || 0,
+                y: parseFloat(document.getElementById('p-y').value) || 0,
+                z: parseFloat(document.getElementById('p-z').value) || 0,
+                sx: parseFloat(document.getElementById('s-x').value) || 1,
+                sy: parseFloat(document.getElementById('s-y').value) || 1,
+                sz: parseFloat(document.getElementById('s-z').value) || 1,
+                rx: parseFloat(document.getElementById('r-x').value) || 0,
+                ry: parseFloat(document.getElementById('r-y').value) || 0,
+                rz: parseFloat(document.getElementById('r-z').value) || 0,
+                color: document.getElementById('p-color').value,
+                canCollide: document.getElementById('p-cancollide').checked,
+                isPhysical: document.getElementById('p-isphysical').checked,
+                isSpawn: document.getElementById('p-spawn').checked,
+                respawnTime: parseInt(document.getElementById('p-respawntime').value) || 0,
+                textLabel: document.getElementById('p-text-label').value,
+                code: document.getElementById('p-code').value
+            };
+            if(currentRoomBlocks[selectedBlockId].type === 'anim_rig') {
+                updateObj.rigHead = parseInt(document.getElementById('rig-slider-head').value) || 0;
+                updateObj.rigLarm = parseInt(document.getElementById('rig-slider-larm').value) || 0;
+                updateObj.rigRarm = parseInt(document.getElementById('rig-slider-rarm').value) || 0;
+                updateObj.rigLleg = parseInt(document.getElementById('rig-slider-lleg').value) || 0;
+                updateObj.rigRleg = parseInt(document.getElementById('rig-slider-rleg').value) || 0;
             }
-        });
-        window.addEventListener('keyup', (e) => {
-            keys[e.key.toLowerCase()] = false;
-        });
+            update(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`), updateObj);
+        };
 
-        /* Viewport Resizing Matrix Updates */
+        window.deleteSelectedPart = function() {
+            if(!isStudioMode || !selectedBlockId) return;
+            remove(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`));
+            document.getElementById('no-selection-msg').style.display = 'block';
+            document.getElementById('inspector-controls').style.display = 'none';
+            selectedBlockId = null;
+        };
+
+        window.copyMapJSON = function() {
+            navigator.clipboard.writeText(JSON.stringify(currentRoomBlocks, null, 2));
+            alert("Map construction nodes encoded to clipboard!");
+        };
+
+        window.pasteMapOverrideJSON = function() {
+            const input = prompt("Paste full exported backup string data here to override room topology properties:");
+            if(!input) return;
+            try {
+                const parsed = JSON.parse(input);
+                set(ref(db, `maps/${localData.room}/blocks`), parsed);
+            } catch(err) { alert("Parsing error. Verify string array format structures safely."); }
+        };
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+            return bytes.buffer;
+        }
+
+        window.exitToHubMenu = function() {
+            if (playerRef) remove(playerRef);
+            window.location.reload();
+        };
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        /* Mouse Drag & Drops Inspector triggers */
         window.addEventListener('mousedown', (e) => {
             if(!gameInitialized) return;
             if(e.button === 0) {
@@ -1145,7 +1207,10 @@
         });
 
         window.addEventListener('mouseup', (e) => {
-            if(e.button === 0) { isLeftMouseDown = false; draggingBlockId = null; }
+            if(e.button === 0) {
+                isLeftMouseDown = false;
+                draggingBlockId = null;
+            }
             if(e.button === 2) isRightMouseDown = false;
         });
 
@@ -1157,7 +1222,6 @@
                 cameraYaw -= e.movementX * 0.003;
                 cameraPitch = Math.max(-Math.PI/2.1, Math.min(Math.PI/2.1, cameraPitch - e.movementY * 0.003));
             }
-
             if (isStudioMode && draggingBlockId && isLeftMouseDown) {
                 processBlockDraggingCoordinates(e);
             }
@@ -1169,53 +1233,22 @@
         }, { passive: true });
 
         function processSceneRaycastSelection(e) {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.closest('#studio-sidebar') || e.target.closest('#ui-container')) return;
-            
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.closest('#studio-sidebar') || e.target.closest('#ui-container') || e.target.closest('#roblox-player-list')) return;
             const mouse = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, camera);
 
             const meshes = Array.from(blockMap.values());
             const intersects = raycaster.intersectObjects(meshes, true);
-
             if(intersects.length > 0) {
                 let hitMesh = intersects[0].object;
-                while(hitMesh.parent && !hitMesh.userData.blockId) {
-                    hitMesh = hitMesh.parent;
-                }
+                while(hitMesh.parent && !hitMesh.userData.blockId) { hitMesh = hitMesh.parent; }
                 const bId = hitMesh.userData.blockId;
                 if (bId) {
                     selectedBlockId = bId;
                     draggingBlockId = bId;
                     loadPartPropertiesIntoInspector(currentRoomBlocks[bId]);
-                    return;
                 }
-            }
-
-            // If left clicked on Sky/Empty ground grid plane with an asset selected in studio toolbars
-            if (isStudioMode && draggedAssetType) {
-                const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-                const targetWorldPos = new THREE.Vector3();
-                raycaster.ray.intersectPlane(plane, targetWorldPos);
-                
-                const newBlockKey = "block_" + Math.random().toString(36).substr(2, 9);
-                const spawnObj = {
-                    x: Math.round(targetWorldPos.x), y: 0.5, z: Math.round(targetWorldPos.z),
-                    sx: 2, sy: 1, sz: 2, rx: 0, ry: 0, rz: 0,
-                    color: draggedAssetType === 'water' ? "#3399ff" : "#00e1ff",
-                    canCollide: draggedAssetType !== 'water',
-                    type: draggedAssetType
-                };
-                if (base64MeshString) {
-                    spawnObj.meshData = base64MeshString;
-                    base64MeshString = ""; 
-                }
-                set(ref(db, `maps/${localData.room}/blocks/${newBlockKey}`), spawnObj);
-                draggedAssetType = ""; 
-            } else {
-                selectedBlockId = null;
-                document.getElementById('no-selection-msg').style.display = 'block';
-                document.getElementById('inspector-controls').style.display = 'none';
             }
         }
 
@@ -1226,7 +1259,6 @@
             const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -currentRoomBlocks[draggingBlockId].y);
             const intersection = new THREE.Vector3();
             raycaster.ray.intersectPlane(plane, intersection);
-
             if (intersection) {
                 update(ref(db, `maps/${localData.room}/blocks/${draggingBlockId}`), {
                     x: parseFloat(intersection.x.toFixed(1)),
@@ -1238,16 +1270,9 @@
         function loadPartPropertiesIntoInspector(b) {
             document.getElementById('no-selection-msg').style.display = 'none';
             document.getElementById('inspector-controls').style.display = 'flex';
-
-            document.getElementById('p-x').value = b.x;
-            document.getElementById('p-y').value = b.y;
-            document.getElementById('p-z').value = b.z;
-            document.getElementById('s-x').value = b.sx || 1;
-            document.getElementById('s-y').value = b.sy || 1;
-            document.getElementById('s-z').value = b.sz || 1;
-            document.getElementById('r-x').value = b.rx || 0;
-            document.getElementById('r-y').value = b.ry || 0;
-            document.getElementById('r-z').value = b.rz || 0;
+            document.getElementById('p-x').value = b.x; document.getElementById('p-y').value = b.y; document.getElementById('p-z').value = b.z;
+            document.getElementById('s-x').value = b.sx || 1; document.getElementById('s-y').value = b.sy || 1; document.getElementById('s-z').value = b.sz || 1;
+            document.getElementById('r-x').value = b.rx || 0; document.getElementById('r-y').value = b.ry || 0; document.getElementById('r-z').value = b.rz || 0;
             document.getElementById('p-color').value = b.color || "#aaaaaa";
             document.getElementById('p-cancollide').checked = b.canCollide !== false;
             document.getElementById('p-isphysical').checked = !!b.isPhysical;
@@ -1268,87 +1293,21 @@
             }
         }
 
-        window.updateSelectedProperty = function() {
-            if(!selectedBlockId) return;
-            const currentObj = currentRoomBlocks[selectedBlockId];
-            const updateObj = {
-                x: parseFloat(document.getElementById('p-x').value),
-                y: parseFloat(document.getElementById('p-y').value),
-                z: parseFloat(document.getElementById('p-z').value),
-                sx: parseFloat(document.getElementById('s-x').value) || 0.1,
-                sy: parseFloat(document.getElementById('s-y').value) || 0.1,
-                sz: parseFloat(document.getElementById('s-z').value) || 0.1,
-                rx: parseFloat(document.getElementById('r-x').value) || 0,
-                ry: parseFloat(document.getElementById('r-y').value) || 0,
-                rz: parseFloat(document.getElementById('r-z').value) || 0,
-                color: document.getElementById('p-color').value,
-                canCollide: document.getElementById('p-cancollide').checked,
-                isPhysical: document.getElementById('p-isphysical').checked,
-                isSpawn: document.getElementById('p-spawn').checked,
-                respawnTime: parseInt(document.getElementById('p-respawntime').value) || 0,
-                code: document.getElementById('p-code').value || "",
-                textLabel: document.getElementById('p-text-label').value || "",
-                type: currentObj.type || "brick"
-            };
-            if(currentObj.meshData) updateObj.meshData = currentObj.meshData;
-
-            if (currentObj.type === 'anim_rig') {
-                updateObj.rigHead = parseInt(document.getElementById('rig-slider-head').value) || 0;
-                updateObj.rigLarm = parseInt(document.getElementById('rig-slider-larm').value) || 0;
-                updateObj.rigRarm = parseInt(document.getElementById('rig-slider-rarm').value) || 0;
-                updateObj.rigLleg = parseInt(document.getElementById('rig-slider-lleg').value) || 0;
-                updateObj.rigRleg = parseInt(document.getElementById('rig-slider-rleg').value) || 0;
-            }
-
-            set(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`), updateObj);
-        };
-
-        window.deleteSelectedPart = function() {
-            if(!selectedBlockId) return;
-            remove(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`));
-            selectedBlockId = null;
-            document.getElementById('no-selection-msg').style.display = 'block';
-            document.getElementById('inspector-controls').style.display = 'none';
-        };
-
-        window.copyMapJSON = function() {
-            const exportedStr = JSON.stringify(currentRoomBlocks, null, 2);
-            navigator.clipboard.writeText(exportedStr).then(() => {
-                alert("Map layout structure JSON string copied directly to your clipboard!");
-            });
-        };
-
-        window.pasteMapOverrideJSON = function() {
-            const raw = prompt("Paste full valid export schema map JSON text payload below:");
-            if(!raw) return;
-            try {
-                const parsed = JSON.parse(raw);
-                set(ref(db, `maps/${localData.room}/blocks`), parsed);
-            } catch(err) {
-                alert("Invalid configuration JSON structure payload.");
-            }
-        };
-
-        /* Physics & Interaction Loop Engine */
         const clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
             if (!gameInitialized) return;
 
-            const delta = Math.min(clock.getDelta(), 0.1); 
+            const delta = Math.min(clock.getDelta(), 0.1);
             const time = clock.getElapsedTime();
 
-            let moveX = 0;
-            let moveZ = 0;
-
-            // Keyboard input processing
+            let moveX = 0; let moveZ = 0;
             if (keys['w'] || keys['arrowup']) moveZ -= 1;
             if (keys['s'] || keys['arrowdown']) moveZ += 1;
             if (keys['a'] || keys['arrowleft']) moveX -= 1;
             if (keys['d'] || keys['arrowright']) moveX += 1;
 
-            // Merge Mobile Virtual Joystick Vector mapping rules
             if (touchMoveId !== null) {
                 moveX += joystickVector.x;
                 moveZ += joystickVector.y;
@@ -1364,71 +1323,26 @@
                     localData.z = seatMesh.position.z;
                     velocityY = 0;
                 }
-                if (keys[' '] || isMobileJumpPressed) {
-                    jumpOutSeat();
-                }
+                if (keys[' '] || isMobileJumpPressed) { jumpOutSeat(); }
             } else if (isFlying) {
                 let flySpeed = 15;
                 let forwardVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw)).normalize();
                 let rightVec = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw)).normalize();
-
                 localData.x += (forwardVec.x * moveZ + rightVec.x * moveX) * flySpeed * delta;
                 localData.z += (forwardVec.z * moveZ + rightVec.z * moveX) * flySpeed * delta;
-
-                if (keys[' '] || isMobileJumpPressed) localData.y += flySpeed * delta;
-                if (keys['shift']) localData.y -= flySpeed * delta;
+                if(keys[' ']) localData.y += flySpeed * delta;
+                if(keys['shift']) localData.y -= flySpeed * delta;
+                velocityY = 0; isGrounded = true;
             } else {
-                // Ground character locomotion logic
-                let walkSpeed = inWater ? 4.5 : 9.0;
-                let directionAngle = cameraYaw;
-                
-                let inputVec = new THREE.Vector3(moveX, 0, moveZ);
-                if (moving) {
-                    inputVec.normalize();
-                    let forwardVec = new THREE.Vector3(-Math.sin(directionAngle), 0, -Math.cos(directionAngle));
-                    let rightVec = new THREE.Vector3(Math.cos(directionAngle), 0, -Math.sin(directionAngle));
-                    
-                    localData.x += (forwardVec.x * inputVec.z + rightVec.x * inputVec.x) * walkSpeed * delta;
-                    localData.z += (forwardVec.z * inputVec.z + rightVec.z * inputVec.x) * walkSpeed * delta;
-                }
-
-                // Gravity logic and collision maps
-                if (inWater) {
-                    if (keys[' '] || isMobileJumpPressed) {
-                        velocityY = 4.0;
-                    } else if (keys['shift']) {
-                        velocityY = -4.0;
-                    } else {
-                        velocityY = Math.max(-2.0, velocityY - 9.8 * delta);
-                    }
-                    localData.y += velocityY * delta;
-                } else if (isClimbing) {
-                    if (moving) {
-                        velocityY = -moveZ * 5.0;
-                    } else {
-                        velocityY = 0;
-                    }
-                    if (keys[' '] || isMobileJumpPressed) {
-                        isClimbing = false;
-                        velocityY = 7.0;
-                    }
-                    localData.y += velocityY * delta;
-                } else {
-                    velocityY -= 28.0 * delta; 
-                    localData.y += velocityY * delta;
-                }
-
-                // Global map interaction collisions checks
+                // Gravity physics pipeline loops
                 let highestGroundLevel = -20;
                 let hitAnyWater = false;
                 let hitAnyLadder = false;
-
                 const playerRadius = 0.4;
-                const playerHeight = 1.8;
 
                 blockDataArray.forEach(b => {
                     const mesh = blockMap.get(b.id);
-                    if (!mesh) return;
+                    if (!mesh || hiddenBlocks[b.id]) return;
 
                     const pMinX = localData.x - playerRadius, pMaxX = localData.x + playerRadius;
                     const pMinY = localData.y - 0.9, pMaxY = localData.y + 0.9;
@@ -1438,44 +1352,41 @@
                     const bMinY = b.y - (b.sy || 1)/2, bMaxY = b.y + (b.sy || 1)/2;
                     const bMinZ = b.z - (b.sz || 1)/2, bMaxZ = b.z + (b.sz || 1)/2;
 
-                    const collides = (pMinX <= bMaxX && pMaxX >= bMinX) &&
-                                     (pMinY <= bMaxY && pMaxY >= bMinY) &&
-                                     (pMinZ <= bMaxZ && pMaxZ >= bMinZ);
+                    const collides = (pMinX <= bMaxX && pMaxX >= bMinX) && (pMinY <= bMaxY && pMaxY >= bMinY) && (pMinZ <= bMaxZ && pMaxZ >= bMinZ);
 
                     if (collides) {
-                        if (b.type === 'water') {
-                            hitAnyWater = true;
-                            return;
-                        }
-                        if (b.type === 'ladder') {
-                            hitAnyLadder = true;
-                            return;
-                        }
+                        if (b.type === 'water') { hitAnyWater = true; return; }
+                        if (b.type === 'ladder') { hitAnyLadder = true; return; }
 
-                        // Code handler block hook execute engine triggers
                         if (b.code && !isStudioMode) {
                             try {
                                 const playerAPI = {
                                     respawn: () => respawnPlayer(),
                                     teleport: (tx, ty, tz) => { localData.x = tx; localData.y = ty; localData.z = tz; },
-                                    setCheckpoint: (cx, cy, cz) => { activeCheckpoint = { x: cx, y: cy, z: cz }; }
+                                    setCheckpoint: (cx, cy, cz) => { activeCheckpoint = { x: cx, y: cy, z: cz }; sendChatMessageToServer("System", "Checkpoint Saved Successfully."); }
                                 };
-                                const sandboxedFunc = new Function('player', b.code + `\nif(typeof onTouch === "function") { onTouch(player); }`);
-                                sandboxedFunc(playerAPI);
-                            } catch(e) {}
+                                const run = new Function('player', b.code);
+                                run(playerAPI);
+                            } catch(e) { console.error("Script exception: ", e); }
                         }
 
-                        if (b.type === 'seat' && !localData.sittingOn && velocityY < 0) {
+                        if (b.type === 'seat' && !localData.sittingOn && velocityY <= 0) {
                             localData.sittingOn = b.id;
                             document.getElementById('jumpout-seat-btn').style.display = 'block';
                             return;
                         }
 
                         if (b.canCollide !== false) {
-                            const overlapY = Math.min(pMaxY, bMaxY) - Math.max(pMinY, bMinY);
-                            if (pMinY + overlapY >= bMaxY - 0.25 && velocityY <= 0) {
-                                if (bMaxY > highestGroundLevel) {
-                                    highestGroundLevel = bMaxY + 0.9;
+                            if (pMinY + 0.3 >= bMaxY && velocityY <= 0) {
+                                if (bMaxY > highestGroundLevel) highestGroundLevel = bMaxY;
+                            } else {
+                                // Side push offsets
+                                const overlapX = Math.min(pMaxX - bMinX, bMaxX - pMinX);
+                                const overlapZ = Math.min(pMaxZ - bMinZ, bMaxZ - pMinZ);
+                                if (overlapX < overlapZ) {
+                                    localData.x += (localData.x > b.x) ? overlapX : -overlapX;
+                                } else {
+                                    localData.z += (localData.z > b.z) ? overlapZ : -overlapZ;
                                 }
                             }
                         }
@@ -1483,38 +1394,48 @@
                 });
 
                 inWater = hitAnyWater;
+                isClimbing = hitAnyLadder;
                 document.getElementById('water-status-indicator').style.display = inWater ? 'block' : 'none';
-
-                if (hitAnyLadder && moving) {
-                    isClimbing = true;
-                } else if (!hitAnyLadder) {
-                    isClimbing = false;
-                }
                 document.getElementById('climb-status-indicator').style.display = isClimbing ? 'block' : 'none';
 
-                if (localData.y <= highestGroundLevel) {
-                    localData.y = highestGroundLevel;
-                    velocityY = 0;
-                    isGrounded = true;
-                    localData.state = moving ? "walking" : "idle";
+                let speed = inWater ? 4 : 8;
+                let angle = cameraYaw;
+                let dirX = -Math.sin(angle) * moveZ + Math.cos(angle) * moveX;
+                let dirZ = -Math.cos(angle) * moveZ - Math.sin(angle) * moveX;
+
+                if (moving) {
+                    const length = Math.sqrt(dirX * dirX + dirZ * dirZ);
+                    localData.x += (dirX / length) * speed * delta;
+                    localData.z += (dirZ / length) * speed * delta;
+                }
+
+                if (isClimbing) {
+                    velocityY = 0; isGrounded = true;
+                    if (keys['w'] || keys['arrowup']) localData.y += 5 * delta;
+                    if (keys['s'] || keys['arrowdown']) localData.y -= 5 * delta;
+                } else if (inWater) {
+                    velocityY = 0; isGrounded = true;
+                    localData.isSubmerged = (keys['shift']);
+                    if (keys[' ']) localData.y += 4 * delta;
+                    if (keys['shift']) localData.y -= 4 * delta;
                 } else {
-                    isGrounded = false;
-                    localData.state = "airborne";
-                }
+                    const groundY = highestGroundLevel + 0.9;
+                    if (localData.y > groundY) {
+                        velocityY -= 28 * delta;
+                        localData.y += velocityY * delta;
+                    }
+                    if (localData.y <= groundY) {
+                        localData.y = groundY; velocityY = 0; isGrounded = true;
+                    } else { isGrounded = false; }
 
-                if ((keys[' '] || isMobileJumpPressed) && isGrounded) {
-                    velocityY = 11.5;
-                    isGrounded = false;
-                }
-
-                if (localData.y < -40) {
-                    respawnPlayer();
+                    if ((keys[' '] || isMobileJumpPressed) && isGrounded) {
+                        velocityY = 11.5; isGrounded = false;
+                    }
+                    if (localData.y < -40) { respawnPlayer(); }
                 }
             }
 
             localData.isMoving = moving;
-
-            /* Visual Character Transformation Pipeline */
             localVisualModel.root.position.set(localData.x, localData.y, localData.z);
             isFirstPerson = (cameraZoomDistance <= 0.8);
             document.getElementById('fps-view-indicator').style.display = isFirstPerson ? 'block' : 'none';
@@ -1524,44 +1445,31 @@
                 localVisualModel.root.rotation.y = cameraYaw + Math.PI;
                 localData.rotY = cameraYaw + Math.PI;
             } else if (moving) {
-                const moveAngle = Math.atan2(moveX, moveZ) + Math.PI + cameraYaw;
+                const moveAngle = Math.atan2(-moveX, -moveZ) + cameraYaw;
                 localVisualModel.root.rotation.y = moveAngle;
                 localData.rotY = moveAngle;
             }
 
-            // Limb Animation swing matrices calculations
-            if (moving && !isFlying && !localData.sittingOn) {
-                const swing = Math.sin(time * (inWater ? 6 : 12)) * 0.6;
-                localVisualModel.lArm.rotation.x = swing;
-                localVisualModel.rArm.rotation.x = -swing;
-                localVisualModel.lLeg.rotation.x = -swing;
-                localVisualModel.rLeg.rotation.x = swing;
-                localData.legSwing = swing;
+            if(playerRef && Math.random() < 0.3) { update(playerRef, localData); }
+
+            // Limb rotation animations pipeline loops
+            if (moving && isGrounded && !localData.sittingOn && !inWater) {
+                localData.legSwing = Math.sin(time * 12) * 0.6;
+                localVisualModel.lArm.rotation.x = -localData.legSwing;
+                localVisualModel.rArm.rotation.x = localData.legSwing;
+                localVisualModel.lLeg.rotation.x = localData.legSwing;
+                localVisualModel.rLeg.rotation.x = -localData.legSwing;
             } else {
-                localVisualModel.lArm.rotation.x = 0;
-                localVisualModel.rArm.rotation.x = 0;
-                localVisualModel.lLeg.rotation.x = 0;
-                localVisualModel.rLeg.rotation.x = 0;
-                localData.legSwing = 0;
+                localVisualModel.lArm.rotation.x = 0; localVisualModel.rArm.rotation.x = 0;
+                localVisualModel.lLeg.rotation.x = 0; localVisualModel.rLeg.rotation.x = 0;
             }
 
-            // Multi-Player data syncer matrices stream pipes
-            if (playerRef && gameInitialized) {
-                set(playerRef, localData);
-            }
-
-            // Dynamic Sync updates for Remote Entities structures
-            Object.keys(remotePlayers).forEach(id => {
-                const rp = remotePlayers[id];
-                const p = rp.data;
-                rp.mesh.root.position.set(p.x, p.y, p.z);
-                rp.mesh.root.rotation.y = p.rotY || 0;
-                
-                if (p.isMoving) {
-                    rp.mesh.lArm.rotation.x = p.legSwing || 0;
-                    rp.mesh.rArm.rotation.x = -(p.legSwing || 0);
-                    rp.mesh.lLeg.rotation.x = -(p.legSwing || 0);
-                    rp.mesh.rLeg.rotation.x = p.legSwing || 0;
+            Object.keys(remotePlayers).forEach(pId => {
+                const rp = remotePlayers[pId];
+                if (rp.data.isMoving && !rp.data.sittingOn && !rp.data.isSubmerged) {
+                    const swing = Math.sin(time * 12) * 0.6;
+                    rp.mesh.lArm.rotation.x = -swing; rp.mesh.rArm.rotation.x = swing;
+                    rp.mesh.lLeg.rotation.x = swing; rp.mesh.rLeg.rotation.x = -swing;
                 } else {
                     rp.mesh.lArm.rotation.x = 0; rp.mesh.rArm.rotation.x = 0;
                     rp.mesh.lLeg.rotation.x = 0; rp.mesh.rLeg.rotation.x = 0;
@@ -1569,7 +1477,6 @@
                 rp.mesh.nameplate.lookAt(camera.position);
             });
 
-            // Camera clipping calculations & positioning updates
             const headHeight = 1.3;
             const targetX = localData.x;
             const targetY = localData.y + headHeight;
