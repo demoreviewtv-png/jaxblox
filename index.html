@@ -87,6 +87,16 @@
             color: #aaaaaa; font-size: 0.8rem; align-self: center; margin-right: 10px;
         }
 
+        /* Room Data Stats Overlay Overlay */
+        #room-stats-panel {
+            position: absolute; top: 10px; right: 10px; z-index: 10;
+            display: none; flex-direction: column; background: rgba(0, 0, 0, 0.8);
+            padding: 12px 16px; border-radius: 12px; border: 1px solid #00e1ff;
+            color: #fff; width: 180px; box-shadow: 0 0 15px rgba(0, 225, 255, 0.2);
+        }
+        .stat-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 0.85rem; }
+        .stat-val { font-weight: bold; color: #ffcc00; }
+
         /* Game Chat Overlay Box UI */
         #chat-window {
             position: absolute; bottom: 20px; left: 20px; width: 320px; height: 240px;
@@ -201,6 +211,18 @@
         <span id="fly-status-indicator" style="color:#00ff66; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">FLYING (F)</span>
         <button id="jumpout-seat-btn" class="dashboard-btn" style="background:#ff9500; display:none; margin-right:10px;" onclick="jumpOutSeat()">Jump Out (Space)</button>
         <button class="dashboard-btn" style="background:#cc2900;" onclick="exitToHubMenu()">Disconnect</button>
+    </div>
+
+    <div id="room-stats-panel">
+        <div style="font-weight:bold; font-size:0.75rem; color:#00e1ff; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px; border-bottom:1px solid #333; padding-bottom:4px;">Room Analytics</div>
+        <div class="stat-row">
+            <span>Active Players:</span>
+            <span id="stat-players-count" class="stat-val">0</span>
+        </div>
+        <div class="stat-row">
+            <span>Total Shapes:</span>
+            <span id="stat-shapes-count" class="stat-val">0</span>
+        </div>
     </div>
 
     <div id="chat-window">
@@ -363,7 +385,7 @@
         let selectedBlockId = null, draggingBlockId = null;
         const keys = {};
 
-        // Generate Character Face Decal Canvas
+        // Generate Character Face Decal Canvas Correctly
         let faceTextureCache = null;
         function generateFaceTexture() {
             if (faceTextureCache) return faceTextureCache;
@@ -373,11 +395,11 @@
             
             ctx.fillStyle = "#ffcc99"; ctx.fillRect(0, 0, 128, 128); 
             ctx.fillStyle = "#111111";
-            ctx.fillRect(30, 45, 14, 26); // Left Eye
-            ctx.fillRect(84, 45, 14, 26); // Right Eye
+            ctx.fillRect(30, 40, 16, 24); // Left Eye
+            ctx.fillRect(82, 40, 16, 24); // Right Eye
 
             ctx.strokeStyle = "#111111"; ctx.lineWidth = 6; ctx.lineCap = "round";
-            ctx.beginPath(); ctx.arc(64, 75, 20, 0, Math.PI, false); ctx.stroke(); 
+            ctx.beginPath(); ctx.arc(64, 72, 22, 0, Math.PI, false); ctx.stroke(); 
 
             faceTextureCache = new THREE.CanvasTexture(canvas);
             return faceTextureCache;
@@ -411,7 +433,6 @@
             document.getElementById('guide-modal').style.display = show ? 'flex' : 'none';
         };
 
-        // Pointer Lock Implementation API Handlers
         function requestPointerLock() {
             if (!gameInitialized || isStudioMode || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
             renderer.domElement.requestPointerLock();
@@ -484,14 +505,14 @@
                 push(activeRoomBlocksRef, {
                     type: draggedAssetType,
                     x: Math.round(target.x), y: Math.round(localData.y), z: Math.round(target.z),
-                    sx: draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?1.5:2)), 
-                    sy: draggedAssetType==='seat'?0.6:(draggedAssetType==='ladder'?3:2), 
-                    sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?0.2:2)),
+                    sx: draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?1.5:(draggedAssetType==='checkpoint'?3:2))), 
+                    sy: draggedAssetType==='seat'?0.6:(draggedAssetType==='ladder'?3:(draggedAssetType==='checkpoint'?0.2:2)), 
+                    sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?0.2:(draggedAssetType==='checkpoint'?3:2))),
                     rx: 0, ry: 0, rz: 0,
                     color: draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":(draggedAssetType==='ladder'?"#ffcc00":(draggedAssetType==='checkpoint'?"#00ff66":"#00e1ff"))), 
                     canCollide: (draggedAssetType !== 'water' && draggedAssetType !== 'ladder' && draggedAssetType !== 'checkpoint'),
                     isSpawn: false,
-                    code: draggedAssetType === 'checkpoint' ? "player.setCheckpoint(this.x, this.y, this.z);" : "",
+                    code: draggedAssetType === 'checkpoint' ? "player.setCheckpoint(thisBlock.x, thisBlock.y, thisBlock.z);" : "",
                     meshData: base64MeshString || ""
                 });
             }
@@ -584,6 +605,25 @@
             if (!isStudioMode) requestPointerLock();
         };
 
+        function calculateRoomMetrics() {
+            // Count total blocks/shapes in active room
+            const totalShapes = Object.keys(currentRoomBlocks).length;
+            document.getElementById('stat-shapes-count').innerText = totalShapes;
+
+            // Count total players in current specific active room
+            let currentRoomPlayers = 0;
+            Object.keys(remotePlayers).forEach(id => {
+                if (remotePlayers[id] && remotePlayers[id].room === localData.room) {
+                    currentRoomPlayers++;
+                }
+            });
+            // Factor local engine player into active counts
+            if(gameInitialized) {
+                if(currentRoomPlayers === 0) currentRoomPlayers = 1;
+            }
+            document.getElementById('stat-players-count').innerText = currentRoomPlayers;
+        }
+
         window.enterGame = async function() {
             const nickname = document.getElementById('username-input').value.trim();
             const roomInput = document.getElementById('search-room-input').value.trim().toLowerCase();
@@ -624,6 +664,7 @@
             setTimeout(() => {
                 document.getElementById('home-menu').style.display = 'none';
                 document.getElementById('ui-container').style.display = 'flex';
+                document.getElementById('room-stats-panel').style.display = 'flex';
                 document.getElementById('chat-window').style.display = 'flex';
                 if (isStudioMode) {
                     document.getElementById('studio-sidebar').style.display = 'flex';
@@ -701,6 +742,7 @@
                 }
                 if(!gameInitialized) respawnPlayer();
                 gameInitialized = true;
+                calculateRoomMetrics();
             });
         };
 
@@ -719,6 +761,7 @@
             rebuildCustomMaps(); 
 
             document.getElementById('ui-container').style.display = 'none';
+            document.getElementById('room-stats-panel').style.display = 'none';
             document.getElementById('studio-sidebar').style.display = 'none';
             document.getElementById('chat-window').style.display = 'none';
             document.getElementById('home-menu').style.display = 'flex';
@@ -797,7 +840,7 @@
 
             Object.keys(currentRoomBlocks).forEach(key => {
                 const b = currentRoomBlocks[key];
-                const colorHex = b.isSpawn ? 0xffd700 : (b.color || 0x00e1ff);
+                const colorHex = b.color || 0x00e1ff;
                 
                 let mesh;
                 if(b.type === 'ladder') {
@@ -843,14 +886,23 @@
                     touchHandler = (player) => { player.setCheckpoint(b.x, b.y, b.z); };
                 }
 
+                let actualW = parseFloat(b.sx) || 1.0;
+                let actualH = parseFloat(b.sy) || 1.0;
+                let actualD = parseFloat(b.sz) || 1.0;
+                if (b.type === 'torus') {
+                    actualW *= 0.8; 
+                    actualH *= 0.35; 
+                    actualD *= 0.8;
+                }
+
                 blockDataArray.push({
                     id: key, 
                     x: b.x, 
                     y: b.y, 
                     z: b.z,
-                    w: parseFloat(b.sx) || 1.0,
-                    h: parseFloat(b.sy) || 1.0,
-                    d: parseFloat(b.sz) || 1.0,
+                    w: actualW,
+                    h: actualH,
+                    d: actualD,
                     isSeat: (b.type === 'seat'),
                     isWater: (b.type === 'water'),
                     isLadder: (b.type === 'ladder'),
@@ -1050,17 +1102,18 @@
 
             const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.5), mat); torso.position.y = 1.6; torso.name = "torso"; group.add(torso);
             
-            const faceDecalMaterial = new THREE.MeshStandardMaterial({ map: generateFaceTexture(), transparent: false });
+            const faceDecalMaterial = new THREE.MeshStandardMaterial({ map: generateFaceTexture() });
             
-            const materialsArray = [
-                skinMat,           // Right (+X)
-                skinMat,           // Left (-X)
-                skinMat,           // Top (+Y)
-                skinMat,           // Bottom (-Y)
-                faceDecalMaterial, // Front (+Z)
-                skinMat            // Back (-Z)
+            const headMaterials = [
+                skinMat,            
+                skinMat,            
+                skinMat,            
+                skinMat,            
+                faceDecalMaterial,  
+                skinMat             
             ];
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), materialsArray); 
+            
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), headMaterials); 
             head.position.y = 2.45; head.name = "head"; group.add(head);
 
             const leftArmPivot = new THREE.Group(); leftArmPivot.position.set(-0.7, 2.1, 0); leftArmPivot.name = "leftArmPivot";
@@ -1113,7 +1166,12 @@
             keys[e.key.toLowerCase()] = false;
         });
         
-        onValue(ref(db, 'players'), snap => { if(gameInitialized) remotePlayers = snap.val() || {}; });
+        onValue(ref(db, 'players'), snap => { 
+            if(gameInitialized) {
+                remotePlayers = snap.val() || {}; 
+                calculateRoomMetrics();
+            }
+        });
 
         function updateLimbAnimations(meshGroup, isMoving, swingAngle, isSitting, isSubmerged, climbingActive) {
             const leftLegPivot = meshGroup.getObjectByName("leftLegPivot");
@@ -1228,15 +1286,15 @@
                     }
 
                     let nextY = localData.y;
-                    let playerRadius = 0.4;
+                    let playerRadius = 0.45;
                     let playerHeight = 2.0;
                     let currentlyInWater = false;
                     let touchingLadder = false;
 
                     blockDataArray.forEach(b => {
-                        let withinX = localData.x >= b.x - b.w/2 - 0.2 && localData.x <= b.x + b.w/2 + 0.2;
-                        let withinY = localData.y >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
-                        let withinZ = localData.z >= b.z - b.d/2 - 0.2 && localData.z <= b.z + b.d/2 + 0.2;
+                        let withinX = localData.x >= b.x - b.w/2 - 0.3 && localData.x <= b.x + b.w/2 + 0.3;
+                        let withinY = localData.y >= b.y - b.h/2 - 0.2 && localData.y <= b.y + b.h/2 + 0.5;
+                        let withinZ = localData.z >= b.z - b.d/2 - 0.3 && localData.z <= b.z + b.d/2 + 0.3;
                         
                         if (withinX && withinY && withinZ) {
                             if (b.isWater) currentlyInWater = true;
@@ -1251,7 +1309,7 @@
                     
                     inWater = currentlyInWater;
                     localData.isSubmerged = inWater;
-                    isClimbing = touchingLadder && (keys['w'] || keys['s'] || keys['arrowup'] || keys['arrowdown'] || mobileTargetDestination !== null);
+                    isClimbing = touchingLadder && (keys['w'] || keys['arrowup'] || keys['s'] || keys['arrowdown'] || mobileTargetDestination !== null || keys[' ']);
                     
                     document.getElementById('water-status-indicator').style.display = inWater ? 'block' : 'none';
                     document.getElementById('climb-status-indicator').style.display = touchingLadder ? 'block' : 'none';
@@ -1269,8 +1327,8 @@
                     } else if (isClimbing) {
                         isGrounded = false;
                         velocityY = 0;
-                        if (keys['w'] || keys['arrowup']) nextY += 0.1;
-                        if (keys['s'] || keys['arrowdown']) nextY -= 0.1;
+                        if (keys['w'] || keys['arrowup'] || keys[' ']) nextY += 0.12;
+                        if (keys['s'] || keys['arrowdown']) nextY -= 0.12;
                         
                         localData.x = nextX;
                         localData.z = nextZ;
