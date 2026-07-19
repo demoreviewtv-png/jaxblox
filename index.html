@@ -252,7 +252,7 @@
 
         <div class="sidebar-section">
             <div class="sidebar-title">Toolbox (Drag Shapes)</div>
-            <div class="asset-tray">
+            <div class="asset-tray" id="toolbox-tray">
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('brick')">🧱 Brick</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('sphere')">🔮 Sphere</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('wedge')">📐 Wedge</div>
@@ -264,7 +264,7 @@
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500;">💺 Seat</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('ladder')" style="border-color:#ffcc00; color:#ffcc00;">🪜 Ladder</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('checkpoint')" style="border-color:#00ff66; color:#00ff66;">🏁 Checkpoint</div>
-            </div>
+                </div>
             <div style="margin-top:8px;">
                 <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px;">Upload Custom Mesh (.glb):</label>
                 <input type="file" id="glb-uploader" accept=".glb" style="font-size:11px; width:100%;">
@@ -414,6 +414,8 @@
         dirLight.position.set(10, 25, 15);
         scene.add(dirLight);
 
+        const gltfLoader = new GLTFLoader();
+
         const ringGeom = new THREE.RingGeometry(0.3, 0.4, 32);
         const ringMat = new THREE.MeshBasicMaterial({ color: 0x00e1ff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
         touchIndicatorRing = new THREE.Mesh(ringGeom, ringMat);
@@ -474,7 +476,6 @@
         window.setDragAsset = function(type) { 
             if(!isStudioMode) return;
             draggedAssetType = type; 
-            base64MeshString = ""; 
         };
 
         // Custom Background Music Uploader Action
@@ -511,7 +512,26 @@
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(evt) { base64MeshString = evt.target.result; draggedAssetType = "glb"; };
+            reader.onload = function(evt) { 
+                base64MeshString = evt.target.result; 
+
+                // Inject a valid draggable asset inside the view tray layout dynamically
+                const existingCustom = document.getElementById('custom-drag-item');
+                if(existingCustom) existingCustom.remove();
+
+                const customTrayItem = document.createElement('div');
+                customTrayItem.id = "custom-drag-item";
+                customTrayItem.className = "tray-item";
+                customTrayItem.innerText = "✨ Custom GLTF Mesh";
+                customTrayItem.setAttribute("draggable", "true");
+                customTrayItem.style.borderColor = "#00ff66";
+                customTrayItem.style.color = "#00ff66";
+                customTrayItem.addEventListener('dragstart', () => {
+                    setDragAsset('glb');
+                });
+
+                document.getElementById('toolbox-tray').appendChild(customTrayItem);
+            };
             reader.readAsDataURL(file);
         });
 
@@ -538,11 +558,11 @@
                     canCollide: (draggedAssetType !== 'water' && draggedAssetType !== 'ladder' && draggedAssetType !== 'checkpoint'),
                     isSpawn: false,
                     code: draggedAssetType === 'checkpoint' ? "player.setCheckpoint(thisBlock.x, thisBlock.y, thisBlock.z);" : "",
-                    meshData: base64MeshString || "",
+                    meshData: draggedAssetType === 'glb' ? base64MeshString : "",
                     textLabel: ""
                 });
             }
-            draggedAssetType = ""; 
+            if(draggedAssetType !== 'glb') draggedAssetType = ""; 
         });
 
         window.updateRoomGlobalConfig = function() {
@@ -907,9 +927,30 @@
                 const blockWrapperGroup = new THREE.Group();
                 blockWrapperGroup.position.set(b.x, b.y, b.z);
 
-                let mesh;
-                if(b.type === 'ladder') {
-                    mesh = createLadderGeometry();
+                if (b.type === 'glb' && b.meshData) {
+                    // Safe async base64 block loader configuration via GLTFLoader
+                    gltfLoader.load(b.meshData, (gltf) => {
+                        const model = gltf.scene;
+                        model.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
+                        model.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
+                        
+                        // Apply custom coloration overrides safely over the GLTF structure
+                        model.traverse(child => {
+                            if (child.isMesh && child.material) {
+                                child.material.color.set(colorHex);
+                                if (b.canCollide === false) { child.material.transparent = true; child.material.opacity = 0.6; }
+                            }
+                        });
+                        
+                        model.userData = { blockId: key, isGLTF: true };
+                        blockWrapperGroup.add(model);
+                    }, undefined, (err) => console.error("Mesh decoding rejected: ", err));
+                } else if(b.type === 'ladder') {
+                    const mesh = createLadderGeometry();
+                    mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
+                    mesh.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
+                    mesh.userData = { blockId: key, isLadder: true };
+                    blockWrapperGroup.add(mesh);
                 } else {
                     let geometry;
                     switch(b.type) {
@@ -931,12 +972,12 @@
                         material = new THREE.MeshStandardMaterial({ color: colorHex });
                         if (b.canCollide === false) { material.transparent = true; material.opacity = 0.6; }
                     }
-                    mesh = new THREE.Mesh(geometry, material);
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
+                    mesh.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
+                    mesh.userData = { blockId: key, isSeat: (b.type === 'seat'), isWater: (b.type === 'water'), isCheckpoint: (b.type === 'checkpoint') };
+                    blockWrapperGroup.add(mesh);
                 }
-
-                mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
-                mesh.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
-                blockWrapperGroup.add(mesh);
 
                 if (b.textLabel && b.textLabel.trim().length > 0) {
                     const boundingHeightHeight = (b.sy || 1) / 2 + 0.95;
@@ -945,7 +986,6 @@
                     blockWrapperGroup.add(textLabelSprite);
                 }
 
-                mesh.userData = { blockId: key, isSeat: (b.type === 'seat'), isWater: (b.type === 'water'), isLadder: (b.type === 'ladder'), isCheckpoint: (b.type === 'checkpoint') };
                 scene.add(blockWrapperGroup);
                 blockMap.set(key, blockWrapperGroup);
 
