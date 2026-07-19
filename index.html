@@ -125,7 +125,7 @@
         .sidebar-section { border-bottom: 1px solid #333; padding: 12px; }
         .sidebar-title { color: #00e1ff; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 5px; max-height: 200px; overflow-y: auto; padding-right: 2px; }
+        .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 5px; max-height: 180px; overflow-y: auto; padding-right: 2px; }
         .tray-item {
             background: #2a2a2a; border: 1px dashed #555; border-radius: 6px;
             padding: 8px; text-align: center; cursor: grab; color: #fff; font-weight: bold; font-size: 0.75rem;
@@ -146,7 +146,7 @@
         }
 
         .code-editor-box {
-            width: 93%; height: 140px; background: #111; color: #00ff66;
+            width: 93%; height: 90px; background: #111; color: #00ff66;
             font-family: monospace; font-size: 11px; border: 1px solid #444;
             border-radius: 6px; padding: 6px; resize: none; margin-top: 5px; outline: none;
         }
@@ -299,6 +299,12 @@
                     <label>Color</label>
                     <input type="color" id="p-color" style="width:100%; height:25px; cursor:pointer;" onchange="updateSelectedProperty()">
                 </div>
+                
+                <div class="prop-grid">
+                    <label style="color:#ffcc00; font-size:11px;">Text Box</label>
+                    <input type="text" id="p-text-label" placeholder="Floating text annotations..." style="background:#2b2b2b; border:1px solid #444; border-radius:4px; color:#fff; padding:4px; font-size:0.8rem;" onchange="updateSelectedProperty()">
+                </div>
+
                 <div class="toggle-container">
                     <label style="font-weight:bold; color:#00e1ff;">CanCollide</label>
                     <input type="checkbox" id="p-cancollide" onchange="updateSelectedProperty()">
@@ -513,7 +519,8 @@
                     canCollide: (draggedAssetType !== 'water' && draggedAssetType !== 'ladder' && draggedAssetType !== 'checkpoint'),
                     isSpawn: false,
                     code: draggedAssetType === 'checkpoint' ? "player.setCheckpoint(thisBlock.x, thisBlock.y, thisBlock.z);" : "",
-                    meshData: base64MeshString || ""
+                    meshData: base64MeshString || "",
+                    textLabel: ""
                 });
             }
             draggedAssetType = ""; 
@@ -544,6 +551,7 @@
                 canCollide: document.getElementById('p-cancollide').checked,
                 isSpawn: document.getElementById('p-spawn').checked,
                 code: document.getElementById('p-code').value || "",
+                textLabel: document.getElementById('p-text-label').value || "",
                 type: currentObj.type || "brick"
             };
             if(currentObj.meshData) updateObj.meshData = currentObj.meshData;
@@ -571,6 +579,7 @@
             document.getElementById('r-y').value = blockData.ry || 0;
             document.getElementById('r-z').value = blockData.rz || 0;
             document.getElementById('p-color').value = blockData.color || "#00e1ff";
+            document.getElementById('p-text-label').value = blockData.textLabel || "";
             document.getElementById('p-cancollide').checked = (blockData.canCollide !== false);
             document.getElementById('p-spawn').checked = !!blockData.isSpawn;
             document.getElementById('p-code').value = blockData.code || "";
@@ -710,11 +719,11 @@
                     
                     initialMapData[baseplateId] = {
                         type: "brick", x: 0, y: 0, z: 0, sx: 100, sy: 1, sz: 100,
-                        rx: 0, ry: 0, rz: 0, color: "#666666", canCollide: true, isSpawn: false, code: ""
+                        rx: 0, ry: 0, rz: 0, color: "#666666", canCollide: true, isSpawn: false, code: "", textLabel: ""
                     };
                     initialMapData[spawnId] = {
                         type: "brick", x: 0, y: 1, z: 0, sx: 4, sy: 1, sz: 4,
-                        rx: 0, ry: 0, rz: 0, color: "#ffd700", canCollide: true, isSpawn: true, code: ""
+                        rx: 0, ry: 0, rz: 0, color: "#ffd700", canCollide: true, isSpawn: true, code: "", textLabel: ""
                     };
                     
                     set(activeRoomBlocksRef, initialMapData);
@@ -833,6 +842,27 @@
             return group;
         }
 
+        // Generates 3D floating text canvas box mesh elements dynamically
+        function createObjectTextLabel(textString) {
+            const canvas = document.createElement('canvas'); 
+            canvas.width = 512; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.85)';
+            ctx.strokeStyle = '#00e1ff';
+            ctx.lineWidth = 4;
+            if(ctx.roundRect) {
+                ctx.beginPath(); ctx.roundRect(4, 4, 504, 120, 16); ctx.fill(); ctx.stroke();
+            } else {
+                ctx.fillRect(4, 4, 504, 120);
+            }
+            ctx.font = 'bold 32px monospace'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(textString, 256, 64);
+            
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
+            sprite.scale.set(5.0, 1.25, 1);
+            return sprite;
+        }
+
         function rebuildCustomMaps() {
             blockMap.forEach(mesh => scene.remove(mesh));
             blockMap.clear();
@@ -842,6 +872,9 @@
                 const b = currentRoomBlocks[key];
                 const colorHex = b.color || 0x00e1ff;
                 
+                const blockWrapperGroup = new THREE.Group();
+                blockWrapperGroup.position.set(b.x, b.y, b.z);
+
                 let mesh;
                 if(b.type === 'ladder') {
                     mesh = createLadderGeometry();
@@ -869,13 +902,21 @@
                     mesh = new THREE.Mesh(geometry, material);
                 }
 
-                mesh.position.set(b.x, b.y, b.z);
                 mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
                 mesh.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
+                blockWrapperGroup.add(mesh);
+
+                // Check and bind text labels into active spatial view hierarchy 
+                if (b.textLabel && b.textLabel.trim().length > 0) {
+                    const boundingHeightHeight = (b.sy || 1) / 2 + 0.95;
+                    const textLabelSprite = createObjectTextLabel(b.textLabel.trim());
+                    textLabelSprite.position.set(0, boundingHeightHeight, 0);
+                    blockWrapperGroup.add(textLabelSprite);
+                }
 
                 mesh.userData = { blockId: key, isSeat: (b.type === 'seat'), isWater: (b.type === 'water'), isLadder: (b.type === 'ladder'), isCheckpoint: (b.type === 'checkpoint') };
-                scene.add(mesh);
-                blockMap.set(key, mesh);
+                scene.add(blockWrapperGroup);
+                blockMap.set(key, blockWrapperGroup);
 
                 let touchHandler = null;
                 if(b.code && b.code.trim().length > 0) {
@@ -985,7 +1026,10 @@
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, camera);
 
-            const intersectables = Array.from(blockMap.values());
+            // Correctly evaluate child mesh lookups within structural layout maps
+            const intersectables = [];
+            blockMap.forEach(group => { group.traverse(child => { if(child.isMesh) intersectables.push(child); }); });
+
             const intersects = raycaster.intersectObjects(intersectables, true);
             
             if (intersects.length > 0) {
@@ -1066,7 +1110,9 @@
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, camera);
 
-            const intersectables = Array.from(blockMap.values());
+            const intersectables = [];
+            blockMap.forEach(group => { group.traverse(child => { if(child.isMesh) intersectables.push(child); }); });
+
             const intersects = raycaster.intersectObjects(intersectables, true);
             if (intersects.length > 0) {
                 let rootObj = intersects[0].object;
