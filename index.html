@@ -1315,6 +1315,12 @@
 
             let moving = (moveX !== 0 || moveZ !== 0);
 
+            // Calculate current directional reference angles based on camera yaw
+            let forwardX = -Math.sin(cameraYaw);
+            let forwardZ = -Math.cos(cameraYaw);
+            let rightX = Math.cos(cameraYaw);
+            let rightZ = -Math.sin(cameraYaw);
+
             if (localData.sittingOn) {
                 const seatMesh = blockMap.get(localData.sittingOn);
                 if (seatMesh) {
@@ -1326,10 +1332,9 @@
                 if (keys[' '] || isMobileJumpPressed) { jumpOutSeat(); }
             } else if (isFlying) {
                 let flySpeed = 15;
-                let forwardVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw)).normalize();
-                let rightVec = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw)).normalize();
-                localData.x += (forwardVec.x * moveZ + rightVec.x * moveX) * flySpeed * delta;
-                localData.z += (forwardVec.z * moveZ + rightVec.z * moveX) * flySpeed * delta;
+                // Synced flight mode camera coordinates
+                localData.x += (forwardX * (-moveZ) + rightX * moveX) * flySpeed * delta;
+                localData.z += (forwardZ * (-moveZ) + rightZ * moveX) * flySpeed * delta;
                 if(keys[' ']) localData.y += flySpeed * delta;
                 if(keys['shift']) localData.y -= flySpeed * delta;
                 velocityY = 0; isGrounded = true;
@@ -1399,9 +1404,8 @@
                 document.getElementById('climb-status-indicator').style.display = isClimbing ? 'block' : 'none';
 
                 let speed = inWater ? 4 : 8;
-                let angle = cameraYaw;
-                let dirX = -Math.sin(angle) * moveZ + Math.cos(angle) * moveX;
-                let dirZ = -Math.cos(angle) * moveZ - Math.sin(angle) * moveX;
+                let dirX = forwardX * (-moveZ) + rightX * moveX;
+                let dirZ = forwardZ * (-moveZ) + rightZ * moveX;
 
                 if (moving) {
                     const length = Math.sqrt(dirX * dirX + dirZ * dirZ);
