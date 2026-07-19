@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>JaxBlox Engine - Secure R6 Sandbox Layer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>JaxBlox Engine - Secure Sandbox & Scripting Layer</title>
     <style>
         body {
             margin: 0; padding: 0; overflow: hidden;
@@ -18,24 +18,18 @@
         #home-menu {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             background: radial-gradient(circle, #2c3e50, #0f171e); z-index: 100;
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: white; transition: opacity 0.5s ease;
-            overflow-y: auto; padding: 30px 0; box-sizing: border-box;
+            overflow-y: auto; padding: 20px 0; box-sizing: border-box;
         }
-        #home-container {
-            display: flex; flex-direction: row; gap: 25px; justify-content: center;
-            align-items: flex-start; flex-wrap: wrap; width: 95%; max-width: 1100px;
+        #home-card {
+            background: rgba(0, 0, 0, 0.85); padding: 30px; border-radius: 20px;
+            border: 2px solid #00e1ff; text-align: center;
+            box-shadow: 0 0 30px rgba(0, 225, 255, 0.3); max-width: 500px; width: 90%;
+            position: relative;
         }
-        #home-card, #avatar-card {
-            background: rgba(0, 0, 0, 0.85); padding: 25px; border-radius: 20px;
-            border: 2px solid #00e1ff; box-shadow: 0 0 30px rgba(0, 225, 255, 0.3);
-            box-sizing: border-box;
-        }
-        #home-card { flex: 1.2; min-width: 320px; text-align: center; }
-        #avatar-card { flex: 1; min-width: 320px; }
-        
         #home-card h1 {
-            font-size: 2.2rem; margin: 0 0 5px 0; color: #00e1ff;
+            font-size: 2.5rem; margin: 0 0 5px 0; color: #00e1ff;
             text-shadow: 0 0 10px rgba(0, 225, 255, 0.5);
         }
         input.menu-input {
@@ -51,7 +45,7 @@
         #play-btn {
             background: #00e1ff; color: #111; padding: 12px 50px; font-size: 1.2rem;
             font-weight: bold; border: none; border-radius: 25px; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 225, 255, 0.4); margin-top: 10px; width: 85%;
+            box-shadow: 0 4px 15px rgba(0, 225, 255, 0.4); margin-top: 10px;
         }
         #play-btn:hover { background: #00bcd4; }
         
@@ -60,29 +54,7 @@
             padding: 8px 16px; border-radius: 15px; font-weight: bold; cursor: pointer;
             margin-top: 12px; display: inline-block; font-size: 0.85rem;
         }
-
-        /* Avatar Editor Layout */
-        .avatar-section-title {
-            color: #ffcc00; font-weight: bold; border-bottom: 1px solid #333;
-            padding-bottom: 5px; margin-bottom: 12px; font-size: 1.1rem; text-transform: uppercase;
-        }
-        .color-pickers-grid {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;
-        }
-        .color-row { display: flex; align-items: center; justify-content: space-between; background: #222; padding: 6px 12px; border-radius: 8px; border: 1px solid #333;}
-        .color-row label { font-size: 0.8rem; color: #ccc; font-weight: bold; }
-        .color-row input[type="color"] { cursor: pointer; border: none; background: transparent; width: 30px; height: 25px; }
-        
-        .accessory-select-grid {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
-        }
-        .acc-btn {
-            background: #2a2a2a; border: 1px solid #444; color: white; border-radius: 8px;
-            padding: 8px; font-size: 0.8rem; cursor: pointer; font-weight: bold; transition: all 0.2s;
-        }
-        .acc-btn.active {
-            background: #00e1ff; color: #111; border-color: #fff; box-shadow: 0 0 10px rgba(0,225,255,0.4);
-        }
+        .help-menu-btn:hover { background: rgba(0, 255, 102, 0.1); }
 
         /* Published Games List UI Styles */
         .games-list-section {
@@ -95,74 +67,150 @@
             display: flex; justify-content: space-between; align-items: center;
         }
         .games-scroll-box {
-            max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+            max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
         }
         .game-item-row {
             background: #1a1a1a; border: 1px solid #444; border-radius: 6px;
             padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;
             cursor: pointer; transition: background 0.2s, border-color 0.2s;
         }
-        .game-item-row:hover { background: #252525; border-color: #00e1ff; }
+        .game-item-row:hover {
+            background: #252525; border-color: #00e1ff;
+        }
         .game-item-name { color: #fff; font-weight: bold; font-size: 0.85rem; }
         .game-item-stats { color: #888; font-size: 0.75rem; font-family: monospace; }
 
-        /* Guide Modal */
+        /* Guide Modal Overlay */
         #guide-modal {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.85); z-index: 200; display: none;
+            align-items: center; justify-content: center;
         }
         #guide-content {
             background: #1e1e1e; border: 2px solid #00ff66; width: 85%; max-width: 550px;
             padding: 25px; border-radius: 15px; color: #ddd; max-height: 75vh; overflow-y: auto;
+            text-align: left; box-shadow: 0 0 25px rgba(0,255,102,0.2);
         }
+        #guide-content h2 { color: #00ff66; margin-top: 0; border-bottom: 1px dashed #444; padding-bottom: 8px; }
+        #guide-content code { background: #111; color: #ffcc00; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        #guide-content pre { background: #111; color: #00ff66; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.8rem; border: 1px solid #333; }
 
-        /* HUD Panels */
+        /* Gameplay HUD Controls */
         #ui-container {
             position: absolute; top: 10px; left: 10px; z-index: 10;
-            display: none; gap: 10px; background: rgba(0,0,0,0.8);
+            display: none; flex-wrap: wrap; gap: 10px; background: rgba(0,0,0,0.8);
             padding: 10px 15px; border-radius: 12px; border: 1px solid #333;
+            max-width: calc(100vw - 40px);
         }
         .dashboard-btn {
             padding: 8px 14px; border: none; border-radius: 6px;
             font-weight: bold; color: white; cursor: pointer; background: #3a3a3a;
         }
         .dashboard-btn:hover { background: #4a4a4a; }
-        #lock-indicator { color: #aaaaaa; font-size: 0.8rem; align-self: center; margin-right: 10px; }
 
+        /* Pointer Lock Status Bar */
+        #lock-indicator {
+            color: #aaaaaa; font-size: 0.8rem; align-self: center; margin-right: 10px;
+        }
+
+        /* Room Data Stats Overlay */
         #room-stats-panel {
             position: absolute; top: 10px; right: 10px; z-index: 10;
             display: none; flex-direction: column; background: rgba(0, 0, 0, 0.8);
             padding: 12px 16px; border-radius: 12px; border: 1px solid #00e1ff;
-            color: #fff; width: 180px;
+            color: #fff; width: 180px; box-shadow: 0 0 15px rgba(0, 225, 255, 0.2);
         }
         .stat-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 0.85rem; }
         .stat-val { font-weight: bold; color: #ffcc00; }
 
+        /* Game Chat Overlay Box UI */
         #chat-window {
-            position: absolute; bottom: 20px; left: 20px; width: 320px; height: 240px;
+            position: absolute; bottom: 20px; left: 20px; width: 320px; height: 180px;
             background: rgba(0, 0, 0, 0.7); border: 1px solid #444; border-radius: 10px;
-            display: none; flex-direction: column; z-index: 15;
+            display: none; flex-direction: column; z-index: 15; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
         }
-        #chat-logs { flex: 1; padding: 10px; overflow-y: auto; color: #fff; font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; }
+        #chat-logs {
+            flex: 1; padding: 10px; overflow-y: auto; color: #fff; font-size: 0.85rem;
+            display: flex; flex-direction: column; gap: 4px; font-family: sans-serif;
+        }
+        .chat-msg { line-height: 1.3; word-break: break-all; }
         .chat-tag { color: #00e1ff; font-weight: bold; }
         #chat-form { display: flex; border-top: 1px solid #444; background: #111; border-bottom-left-radius: 9px; border-bottom-right-radius: 9px; }
-        #chat-input { flex: 1; background: transparent; border: none; padding: 8px 12px; color: #fff; font-size: 0.85rem; outline: none; }
+        #chat-input {
+            flex: 1; background: transparent; border: none; padding: 8px 12px;
+            color: #fff; font-size: 0.85rem; outline: none;
+        }
 
-        /* Studio Panel */
+        /* Mobile Controls Styling */
+        #mobile-hud {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 5; pointer-events: none; display: none;
+        }
+        .mobile-zone {
+            pointer-events: auto; position: absolute;
+        }
+        #joystick-container {
+            bottom: 40px; left: 40px; width: 120px; height: 120px;
+            background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        }
+        #joystick-knob {
+            width: 50px; height: 50px; background: rgba(0, 225, 255, 0.7);
+            border-radius: 50%; box-shadow: 0 0 10px rgba(0, 225, 255, 0.8);
+            transition: transform 0.05s linear;
+        }
+        #mobile-jump-btn {
+            bottom: 50px; right: 40px; width: 75px; height: 75px;
+            background: rgba(255, 255, 255, 0.2); border: 3px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: bold; font-size: 1.1rem; text-shadow: 0 1px 3px black;
+        }
+        #mobile-jump-btn:active {
+            background: rgba(0, 225, 255, 0.4); border-color: #00e1ff;
+        }
+
+        /* Studio Editor Sidebar Layouts */
         #studio-sidebar {
             position: absolute; right: 0; top: 0; width: 320px; height: 100vh;
             background: #1e1e1e; border-left: 2px solid #333; z-index: 20;
-            color: #ddd; display: none; flex-direction: column; font-size: 0.85rem;
+            color: #ddd; display: none; flex-direction: column;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5); font-size: 0.85rem;
         }
         .sidebar-section { border-bottom: 1px solid #333; padding: 12px; }
-        .sidebar-title { color: #00e1ff; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
-        .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-height: 180px; overflow-y: auto; }
-        .tray-item { background: #2a2a2a; border: 1px dashed #555; border-radius: 6px; padding: 8px; text-align: center; cursor: grab; font-weight: bold; font-size: 0.75rem; color:#fff;}
+        .sidebar-title { color: #00e1ff; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 5px; max-height: 220px; overflow-y: auto; padding-right: 2px; }
+        .tray-item {
+            background: #2a2a2a; border: 1px dashed #555; border-radius: 6px;
+            padding: 8px; text-align: center; cursor: grab; color: #fff; font-weight: bold; font-size: 0.75rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .tray-item:active { cursor: grabbing; background: #333; }
+        
         .prop-grid { display: grid; grid-template-columns: 50px 1fr; gap: 8px; align-items: center; margin-bottom: 5px; }
+        .prop-grid label { color: #aaa; font-weight: bold; }
         .prop-inputs { display: flex; gap: 4px; }
-        .prop-inputs input { width: 100%; background: #2b2b2b; border: 1px solid #444; border-radius: 4px; color: #fff; padding: 4px; text-align: center; font-size: 0.8rem; }
-        .toggle-container { display: flex; justify-content: space-between; align-items: center; background: #2a2a2a; padding: 8px; border-radius: 6px; margin-top: 5px; }
-        .code-editor-box { width: 93%; height: 70px; background: #111; color: #00ff66; font-family: monospace; font-size: 11px; border: 1px solid #444; border-radius: 6px; padding: 6px; resize: none; }
+        .prop-inputs input {
+            width: 100%; background: #2b2b2b; border: 1px solid #444; border-radius: 4px;
+            color: #fff; padding: 4px; text-align: center; font-size: 0.8rem;
+        }
+        
+        .toggle-container {
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #2a2a2a; padding: 8px; border-radius: 6px; margin-top: 5px;
+        }
+
+        .code-editor-box {
+            width: 93%; height: 90px; background: #111; color: #00ff66;
+            font-family: monospace; font-size: 11px; border: 1px solid #444;
+            border-radius: 6px; padding: 6px; resize: none; margin-top: 5px; outline: none;
+        }
+
+        .rig-slider-group {
+            background: #252525; padding: 8px; border-radius: 6px; margin-top: 4px; border: 1px solid #444;
+        }
+        .rig-slider-group label { display: block; font-size: 11px; color: #00e1ff; margin-bottom: 2px; font-weight: bold; }
+        .rig-slider-group input { width: 100%; }
     </style>
     <script type="importmap">
         {
@@ -176,135 +224,231 @@
 <body>
 
     <div id="home-menu">
-        <div id="home-container">
-            <div id="home-card">
-                <h1>JAXBLOX R6 STUDIO</h1>
-                <p>Multiplayer Simulation Matrix & Interactive Workspace Layer</p>
-                
-                <input type="text" id="username-input" class="menu-input" placeholder="Enter Username..." maxlength="15" value="Player">
-                <div class="search-container">
-                    <input type="text" id="search-room-input" class="menu-input" style="width:90%; margin-bottom:0;" placeholder="Room Node ID (e.g. lobby, obby)">
+        <div id="home-card">
+            <h1>JAXBLOX WORLD</h1>
+            <p>Secure Simulation Engine Sandbox Matrix with Protected Admin Layer</p>
+            
+            <input type="text" id="username-input" class="menu-input" placeholder="Enter Nickname..." maxlength="15">
+            <div class="search-container">
+                <input type="text" id="search-room-input" class="menu-input" style="width:90%; margin-bottom:0;" placeholder="Room Code (lobby, obby)">
+            </div>
+            <div class="search-container" style="background: rgba(255, 0, 85, 0.05); border: 1px dashed rgba(255, 0, 85, 0.3);">
+                <input type="password" id="admin-pass-input" class="menu-input" style="width:90%; margin-bottom:0;" placeholder="Editor Password (Leave blank for player mode)">
+            </div>
+            <button id="play-btn" onclick="enterGame()">LAUNCH WORLD</button>
+            
+            <div class="games-list-section">
+                <div class="games-list-header">
+                    <span>🌍 Published Active Rooms</span>
+                    <span style="font-size: 0.7rem; color: #888;">Public Only</span>
                 </div>
-                <div class="search-container" style="background: rgba(255, 0, 85, 0.05); border: 1px dashed rgba(255, 0, 85, 0.3);">
-                    <input type="password" id="admin-pass-input" class="menu-input" style="width:90%; margin-bottom:0;" placeholder="Editor Password (Optional Admin Bypass)">
+                <div class="games-scroll-box" id="games-scroll-box">
+                    <div style="color: #777; font-style: italic; font-size: 0.8rem; text-align: center; padding: 10px 0;">Scanning directory for public games...</div>
                 </div>
-                <button id="play-btn" onclick="enterGame()">LAUNCH UNIVERSE</button>
-                
-                <div class="games-list-section">
-                    <div class="games-list-header">
-                        <span>🌍 Server Directory</span>
-                        <span style="font-size: 0.7rem; color: #888;">Public Maps</span>
-                    </div>
-                    <div class="games-scroll-box" id="games-scroll-box">
-                        <div style="color: #777; font-style: italic; font-size: 0.8rem; text-align: center; padding: 10px 0;">Scanning network mappings...</div>
-                    </div>
-                </div>
-                <button class="help-menu-btn" onclick="toggleGuideModal(true)">📖 SCRIPTING REFERENCE</button>
             </div>
 
-            <div id="avatar-card">
-                <div class="avatar-section-title">🎨 R6 Customization Hub</div>
-                
-                <div class="color-pickers-grid">
-                    <div class="color-row"><label>Head</label><input type="color" id="av-head-col" value="#ffd4a3" onchange="previewAvatar()"></div>
-                    <div class="color-row"><label>Torso</label><input type="color" id="av-torso-col" value="#00e1ff" onchange="previewAvatar()"></div>
-                    <div class="color-row"><label>Left Arm</label><input type="color" id="av-larm-col" value="#ffd4a3" onchange="previewAvatar()"></div>
-                    <div class="color-row"><label>Right Arm</label><input type="color" id="av-rarm-col" value="#ffd4a3" onchange="previewAvatar()"></div>
-                    <div class="color-row"><label>Left Leg</label><input type="color" id="av-lleg-col" value="#333333" onchange="previewAvatar()"></div>
-                    <div class="color-row"><label>Right Leg</label><input type="color" id="av-rleg-col" value="#333333" onchange="previewAvatar()"></div>
-                </div>
-
-                <div class="avatar-section-title" style="font-size: 0.9rem; margin-top: 5px;">🎩 Avatar Accessories</div>
-                <div class="accessory-select-grid">
-                    <button class="acc-btn active" id="acc-none" onclick="selectAccessory('none')">None</button>
-                    <button class="acc-btn" id="acc-visor" onclick="selectAccessory('visor')">🥽 Sci-Fi Visor</button>
-                    <button class="acc-btn" id="acc-knight" onclick="selectAccessory('knight')">🪖 Knight Helmet</button>
-                    <button class="acc-btn" id="acc-crown" onclick="selectAccessory('crown')">👑 Royal Crown</button>
-                    <button class="acc-btn" id="acc-tophat" onclick="selectAccessory('tophat')">🎩 Top Hat</button>
-                    <button class="acc-btn" id="acc-fedora" onclick="selectAccessory('fedora')">👒 Classic Fedora</button>
-                </div>
-                
-                <div id="avatar-preview-box" style="width: 100%; height: 160px; margin-top: 15px; background: #111; border: 1px solid #333; border-radius: 10px; overflow: hidden; position: relative;"></div>
-            </div>
+            <br>
+            <button class="help-menu-btn" onclick="toggleGuideModal(true)">📖 SCRIPTING GUIDE</button>
         </div>
     </div>
 
     <div id="guide-modal">
-        <div id="guide-content" style="background: #1e1e1e; padding: 25px; border-radius: 15px; color: #ddd; max-width: 500px; width: 90%;">
-            <h2 style="color:#00ff66; margin-top:0;">Scripting Layer API</h2>
-            <p>Code assigned to parts executes via an <code>onTouch(player)</code> structure.</p>
+        <div id="guide-content">
+            <h2>JaxBlox Scripting Guide</h2>
+            <p>Objects process custom JavaScript hooks automatically upon player contact. Code blocks must implement an <code>onTouch(player)</code> structure.</p>
+            
+            <h3 style="color:#00e1ff; margin-bottom:4px;">Available API Handlers:</h3>
             <ul>
-                <li><code>player.respawn()</code> - Resets avatar location.</li>
-                <li><code>player.teleport(x, y, z)</code> - Moves coordinate position.</li>
-                <li><code>player.setCheckpoint(x, y, z)</code> - Overrides dynamic spawns.</li>
+                <li><code>player.respawn()</code> — Resets targeted character instantly to spawn location or active checkpoint.</li>
+                <li><code>player.teleport(x, y, z)</code> — Warps player coordinates instantly to specified vectors.</li>
+                <li><code>player.setCheckpoint(x, y, z)</code> — Dynamically overrides active spawn/respawn point configurations.</li>
             </ul>
-            <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:10px;" onclick="toggleGuideModal(false)">Dismiss Guide</button>
+
+            <h3 style="color:#00e1ff; margin-bottom:4px;">Example Checkpoint Script:</h3>
+            <pre>function onTouch(player) {
+  player.setCheckpoint(0, 5, 10);
+}</pre>
+            
+            <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:15px;" onclick="toggleGuideModal(false)">Close Guide Window</button>
         </div>
     </div>
 
     <div id="ui-container">
         <span id="room-indicator" style="color:#00e1ff; font-weight:bold; margin-right:10px; font-size:0.9rem; align-self:center;">ROOM: LOBBY</span>
-        <span id="lock-indicator">Click context area to capture cursor</span>
-        <span id="fps-view-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; display:none; font-weight:bold; margin-right:10px;">1ST PERSON VIEW</span>
-        <span id="water-status-indicator" style="color:#3399ff; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🌊 LIQUID ENVIRONMENT</span>
-        <span id="climb-status-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🧗 GRID CLIMBING</span>
-        <span id="fly-status-indicator" style="color:#00ff66; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">NOCLIP ACTION (F)</span>
-        <button id="mute-audio-btn" class="dashboard-btn" style="background:#4a4a4a; color:#00ff66; margin-right:10px;" onclick="toggleAudioMute()">🔊 Audio Track</button>
-        <button id="jumpout-seat-btn" class="dashboard-btn" style="background:#ff9500; display:none; margin-right:10px;" onclick="jumpOutSeat()">Leave Seat (Space)</button>
+        <span id="lock-indicator">Click screen to lock mouse</span>
+        <span id="fps-view-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none;">FIRST PERSON</span>
+        <span id="water-status-indicator" style="color:#3399ff; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🌊 SWIMMING</span>
+        <span id="climb-status-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🧗 CLIMBING</span>
+        <span id="fly-status-indicator" style="color:#00ff66; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">FLYING (F)</span>
+        <button id="mute-audio-btn" class="dashboard-btn" style="background:#4a4a4a; color:#00ff66; margin-right:10px;" onclick="toggleAudioMute()">🔊 Audio Active</button>
+        <button id="jumpout-seat-btn" class="dashboard-btn" style="background:#ff9500; display:none; margin-right:10px;" onclick="jumpOutSeat()">Jump Out (Space)</button>
         <button class="dashboard-btn" style="background:#cc2900;" onclick="exitToHubMenu()">Disconnect</button>
     </div>
 
     <div id="room-stats-panel">
-        <div style="font-weight:bold; font-size:0.75rem; color:#00e1ff; text-transform:uppercase; margin-bottom:6px; border-bottom:1px solid #333;">Analytics</div>
-        <div class="stat-row"><span>Players:</span><span id="stat-players-count" class="stat-val">0</span></div>
-        <div class="stat-row"><span>Objects:</span><span id="stat-shapes-count" class="stat-val">0</span></div>
+        <div style="font-weight:bold; font-size:0.75rem; color:#00e1ff; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px; border-bottom:1px solid #333; padding-bottom:4px;">Room Analytics</div>
+        <div class="stat-row">
+            <span>Active Players:</span>
+            <span id="stat-players-count" class="stat-val">0</span>
+        </div>
+        <div class="stat-row">
+            <span>Total Shapes:</span>
+            <span id="stat-shapes-count" class="stat-val">0</span>
+        </div>
+    </div>
+
+    <div id="mobile-hud">
+        <div id="joystick-container" class="mobile-zone">
+            <div id="joystick-knob"></div>
+        </div>
+        <div id="mobile-jump-btn" class="mobile-zone">JUMP</div>
     </div>
 
     <div id="chat-window">
         <div id="chat-logs"></div>
         <form id="chat-form" onsubmit="sendChatMessage(event)">
-            <input type="text" id="chat-input" placeholder="Say something... (Press Enter)" maxlength="60" autocomplete="off">
+            <input type="text" id="chat-input" placeholder="Type chat message here... (Press Enter)" maxlength="60" autocomplete="off">
         </form>
     </div>
 
     <div id="studio-sidebar">
-        <div class="sidebar-section">
-            <div class="sidebar-title">Global Config</div>
-            <div class="toggle-container"><label style="font-weight:bold;">Player Physics Collisions</label><input type="checkbox" id="room-players-collide" onchange="updateRoomGlobalConfig()"></div>
-            <div class="toggle-container" style="border: 1px solid #00ff66;"><label style="font-weight:bold; color:#00ff66;">Fly Mode Enable</label><input type="checkbox" id="studio-fly-toggle" onchange="toggleFlightMode(this.checked)"></div>
-            <div class="toggle-container" style="border: 1px solid #ffcc00;"><label style="font-weight:bold; color:#ffcc00;">Public Listing Node</label><input type="checkbox" id="room-public-toggle" onchange="updateRoomVisibilityConfig()"></div>
-            <div style="margin-top:10px;"><label style="display:block; font-size:11px; color:#aaa; font-weight:bold;">🎵 Ambience File Track (.mp3):</label><input type="file" id="bgm-uploader" accept="audio/*" style="font-size:11px; width:100%;"></div>
+        <div class="sidebar-section" id="global-config-section">
+            <div class="sidebar-title">Global Room Config</div>
+            <div class="toggle-container">
+                <label style="font-weight:bold;">Players Collide</label>
+                <input type="checkbox" id="room-players-collide" onchange="updateRoomGlobalConfig()">
+            </div>
+            <div class="toggle-container" style="margin-top: 8px; border: 1px solid #00ff66;">
+                <label style="font-weight:bold; color:#00ff66;">Fly Mode (F)</label>
+                <input type="checkbox" id="studio-fly-toggle" onchange="toggleFlightMode(this.checked)">
+            </div>
+            <div class="toggle-container" style="margin-top: 8px; border: 1px solid #ffcc00;">
+                <label style="font-weight:bold; color:#ffcc00;">Public Map Listing</label>
+                <input type="checkbox" id="room-public-toggle" onchange="updateRoomVisibilityConfig()">
+            </div>
+            <div style="margin-top:12px; border-top: 1px solid #333; padding-top:10px;">
+                <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px; font-weight:bold;">🎵 Room Background Music:</label>
+                <input type="file" id="bgm-uploader" accept="audio/*" style="font-size:11px; width:100%;">
+            </div>
         </div>
+
         <div class="sidebar-section">
-            <div class="sidebar-title">R6 Builder Toolbox</div>
+            <div class="sidebar-title">Toolbox</div>
             <div class="asset-tray" id="toolbox-tray">
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('brick')">🧱 Block</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('brick')">🧱 Brick</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('sphere')">🔮 Sphere</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('wedge')">📐 Wedge</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('cylinder')">📦 Cylinder</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('water')" style="color:#3399ff;">🌊 Water Block</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="color:#ff9500;">💺 Part Seat</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('ladder')" style="color:#ffcc00;">🪜 Ladder Node</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('checkpoint')" style="color:#00ff66;">🏁 SpawnPoint</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('capsule')">💎 Capsule</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('cone')">📐 Cone</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('torus')">🪐 Torus</div>
+                
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('water')" style="border-color:#3399ff; color:#3399ff;">🌊 Water</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500;">💺 Seat</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('ladder')" style="border-color:#ffcc00; color:#ffcc00;">🪜 Ladder</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('checkpoint')" style="border-color:#00ff66; color:#00ff66;">🏁 Checkpoint</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('anim_rig')" style="border-color:#ff00e1; color:#ff00e1;">🕺 Animation Rig</div>
             </div>
-            <div style="margin-top:8px;"><label style="display:block; font-size:11px; color:#aaa;">Upload Dynamic Mesh (.glb):</label><input type="file" id="glb-uploader" accept=".glb" style="font-size:11px; width:100%;"></div>
+            <div style="margin-top:8px;">
+                <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px;">Upload Custom Mesh (.glb):</label>
+                <input type="file" id="glb-uploader" accept=".glb" style="font-size:11px; width:100%;">
+            </div>
         </div>
+
         <div class="sidebar-section" style="flex:1; overflow-y:auto;">
-            <div class="sidebar-title">Properties</div>
-            <div id="no-selection-msg" style="color:#777; font-style:italic; text-align:center;">Select element to inspect</div>
-            <div id="inspector-controls" style="display:none; flex-direction:column; gap:8px;">
-                <div class="prop-grid"><label>Pos</label><div class="prop-inputs"><input type="number" step="0.5" id="p-x" onchange="updateSelectedProperty()"><input type="number" step="0.5" id="p-y" onchange="updateSelectedProperty()"><input type="number" step="0.5" id="p-z" onchange="updateSelectedProperty()"></div></div>
-                <div class="prop-grid"><label>Scale</label><div class="prop-inputs"><input type="number" step="0.1" id="s-x" onchange="updateSelectedProperty()"><input type="number" step="0.1" id="s-y" onchange="updateSelectedProperty()"><input type="number" step="0.1" id="s-z" onchange="updateSelectedProperty()"></div></div>
-                <div class="prop-grid"><label>Rot</label><div class="prop-inputs"><input type="number" step="5" id="r-x" onchange="updateSelectedProperty()"><input type="number" step="5" id="r-y" onchange="updateSelectedProperty()"><input type="number" step="5" id="r-z" onchange="updateSelectedProperty()"></div></div>
-                <div class="prop-grid"><label>Color</label><input type="color" id="p-color" style="width:100%;" onchange="updateSelectedProperty()"></div>
-                <div class="prop-grid"><label>Label</label><input type="text" id="p-text-label" onchange="updateSelectedProperty()"></div>
-                <div class="toggle-container"><label>CanCollide</label><input type="checkbox" id="p-cancollide" onchange="updateSelectedProperty()"></div>
-                <div class="toggle-container"><label>Is Physics Base</label><input type="checkbox" id="p-isphysical" onchange="updateSelectedProperty()"></div>
-                <div style="margin-top:4px;"><label style="font-weight:bold; color:#00ff66; display:block;">Script Runtime Code (onTouch):</label><textarea id="p-code" class="code-editor-box" onchange="updateSelectedProperty()"></textarea></div>
-                <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:5px;" onclick="deleteSelectedPart()">Remove Object</button>
+            <div class="sidebar-title">Properties Inspector</div>
+            <div id="no-selection-msg" style="color:#777; font-style:italic; text-align:center; padding:10px 0;">Click an object to drag or inspect</div>
+            
+            <div id="inspector-controls" style="display:none; flex-direction:column; gap:10px;">
+                <div class="prop-grid">
+                    <label>Pos</label>
+                    <div class="prop-inputs">
+                        <input type="number" step="0.5" id="p-x" onchange="updateSelectedProperty()">
+                        <input type="number" step="0.5" id="p-y" onchange="updateSelectedProperty()">
+                        <input type="number" step="0.5" id="p-z" onchange="updateSelectedProperty()">
+                    </div>
+                </div>
+                <div class="prop-grid">
+                    <label>Scale</label>
+                    <div class="prop-inputs">
+                        <input type="number" step="0.1" min="0.1" id="s-x" onchange="updateSelectedProperty()">
+                        <input type="number" step="0.1" min="0.1" id="s-y" onchange="updateSelectedProperty()">
+                        <input type="number" step="0.1" min="0.1" id="s-z" onchange="updateSelectedProperty()">
+                    </div>
+                </div>
+                <div class="prop-grid">
+                    <label>Rot</label>
+                    <div class="prop-inputs">
+                        <input type="number" step="5" id="r-x" onchange="updateSelectedProperty()">
+                        <input type="number" step="5" id="r-y" onchange="updateSelectedProperty()">
+                        <input type="number" step="5" id="r-z" onchange="updateSelectedProperty()">
+                    </div>
+                </div>
+                <div class="prop-grid">
+                    <label>Color</label>
+                    <input type="color" id="p-color" style="width:100%; height:25px; cursor:pointer;" onchange="updateSelectedProperty()">
+                </div>
+                
+                <div class="prop-grid">
+                    <label style="color:#ffcc00; font-size:11px;">Text Box</label>
+                    <input type="text" id="p-text-label" placeholder="Floating text annotations..." style="background:#2b2b2b; border:1px solid #444; border-radius:4px; color:#fff; padding:4px; font-size:0.8rem;" onchange="updateSelectedProperty()">
+                </div>
+
+                <div class="toggle-container">
+                    <label style="font-weight:bold; color:#00e1ff;">CanCollide</label>
+                    <input type="checkbox" id="p-cancollide" onchange="updateSelectedProperty()">
+                </div>
+                <div class="toggle-container" style="border: 1px dashed #ff9500; padding: 4px 8px;">
+                    <label style="font-weight:bold; color:#ff9500;">Is Physical (Physics)</label>
+                    <input type="checkbox" id="p-isphysical" onchange="updateSelectedProperty()">
+                </div>
+                <div class="toggle-container">
+                    <label style="font-weight:bold;">Is Spawn?</label>
+                    <input type="checkbox" id="p-spawn" onchange="updateSelectedProperty()">
+                </div>
+                
+                <div class="prop-grid" style="margin-top: 4px;">
+                    <label style="font-size:10px; color:#ffcc00;">Respawn (s)</label>
+                    <input type="number" id="p-respawntime" min="0" max="300" placeholder="0 = Never" style="background:#2b2b2b; border:1px solid #444; border-radius:4px; color:#fff; padding:4px; font-size:0.8rem;" onchange="updateSelectedProperty()">
+                </div>
+
+                <div id="rig-pose-editor" style="display:none; border-top: 1px dashed #ff00e1; margin-top:8px; padding-top:8px;">
+                    <div style="font-weight:bold; color:#ff00e1; margin-bottom:5px; font-size:11px;">Rig Bone Manipulator</div>
+                    <div class="rig-slider-group">
+                        <label>Head Rotation (Yaw)</label>
+                        <input type="range" id="rig-slider-head" min="-90" max="90" value="0" oninput="updateSelectedProperty()">
+                    </div>
+                    <div class="rig-slider-group">
+                        <label>Left Arm Swing</label>
+                        <input type="range" id="rig-slider-larm" min="-90" max="90" value="0" oninput="updateSelectedProperty()">
+                    </div>
+                    <div class="rig-slider-group">
+                        <label>Right Arm Swing</label>
+                        <input type="range" id="rig-slider-rarm" min="-90" max="90" value="0" oninput="updateSelectedProperty()">
+                    </div>
+                    <div class="rig-slider-group">
+                        <label>Left Leg Angle</label>
+                        <input type="range" id="rig-slider-lleg" min="-90" max="90" value="0" oninput="updateSelectedProperty()">
+                    </div>
+                    <div class="rig-slider-group">
+                        <label>Right Leg Angle</label>
+                        <input type="range" id="rig-slider-rleg" min="-90" max="90" value="0" oninput="updateSelectedProperty()">
+                    </div>
+                </div>
+
+                <div style="margin-top:5px; border-top: 1px dashed #333; padding-top:10px;">
+                    <label style="font-weight:bold; color:#00ff66; display:block;">Object Code (onTouch):</label>
+                    <textarea id="p-code" class="code-editor-box" placeholder="/* API HELPER GUIDE:&#10; * player.respawn();&#10; * player.teleport(x, y, z);&#10; * player.setCheckpoint(x, y, z);&#10; */&#10;function onTouch(player) {&#10;  player.respawn();&#10;}" onchange="updateSelectedProperty()"></textarea>
+                </div>
+
+                <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:10px;" onclick="deleteSelectedPart()">Delete Selected Object</button>
             </div>
         </div>
-        <div class="sidebar-section" style="background:#151515; display:flex; gap:5px;"><button class="dashboard-btn" style="font-size:11px; flex:1;" onclick="copyMapJSON()">Export Map</button><button class="dashboard-btn" style="font-size:11px; flex:1;" onclick="pasteMapOverrideJSON()">Import Map</button></div>
+
+        <div class="sidebar-section" style="background:#151515; display:flex; gap:5px;">
+            <button class="dashboard-btn" style="font-size:11px; flex:1; background:#3a3a3a;" onclick="copyMapJSON()">Export JSON</button>
+            <button class="dashboard-btn" style="font-size:11px; flex:1; background:#3a3a3a;" onclick="pasteMapOverrideJSON()">Import JSON</button>
+        </div>
     </div>
 
     <script type="module">
@@ -320,7 +464,8 @@
             projectId: "jaxblox",
             storageBucket: "jaxblox.firebasestorage.app",
             messagingSenderId: "893095367039",
-            appId: "1:893095367039:web:46e38624351daa9f824a4a"
+            appId: "1:893095367039:web:46e38624351daa9f824a4a",
+            measurementId: "G-2B5B8E53G7"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -338,24 +483,30 @@
         let isClimbing = false;
         
         let globalRoomConfig = { playersCollide: false, isPublic: false };
-        let activeSelectedAccessory = 'none';
-
         let localData = { 
             id: playerId, username: "Guest",
-            x: 0, y: 3, z: 0, rotY: Math.PI, 
-            room: 'lobby', sittingOn: "", isMoving: false, state: "idle",
-            // R6 Component Color Matrix Configuration Elements
-            colors: { head: "#ffd4a3", torso: "#00e1ff", larm: "#ffd4a3", rarm: "#ffd4a3", lleg: "#333333", rleg: "#333333" },
-            accessory: 'none'
+            x: 0, y: 3, z: 0, rotY: Math.PI, color: Math.random() * 0xffffff, room: 'lobby',
+            sittingOn: "", legSwing: 0, isMoving: false, isSubmerged: false, state: "idle"
         };
         
         let velocityY = 0;
         let isGrounded = false;
-        let cameraZoomDistance = 14;
-        let cameraYaw = 0, cameraPitch = 0.4;
+        
+        let cameraZoomDistance = 15;
+        const minZoom = 0.5, maxZoom = 45;
+        let cameraYaw = 0, cameraPitch = 0.6;
         let isPointerLocked = false;
         let isRightMouseDown = false, isLeftMouseDown = false;
         let isFirstPerson = false;
+        
+        /* Mobile Touch States */
+        let touchMoveId = null;
+        let touchLookId = null;
+        let joystickStart = { x: 0, y: 0 };
+        let joystickVector = { x: 0, y: 0 };
+        let lastTouchLookPos = { x: 0, y: 0 };
+        let isMobileJumpPressed = false;
+
         let spawnPoint = { x: 0, y: 1.5, z: 0 }; 
         let activeCheckpoint = null; 
         let draggedAssetType = "";
@@ -370,619 +521,1079 @@
         let selectedBlockId = null, draggingBlockId = null;
         const keys = {};
 
+        let hiddenBlocks = {};
+
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x1a222d);
         
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.05, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(10, 30, 15);
+        dirLight.position.set(20, 40, 20);
         scene.add(dirLight);
 
         const gltfLoader = new GLTFLoader();
+
         let playerMeshes = {};
         let blockMap = new Map(); 
         let blockDataArray = [];
 
-        // --- PREVIEW CANVAS SETUP FOR HOME AVATAR EDITOR ---
-        let previewScene, previewCamera, previewRenderer, previewModelGroup;
-        function initAvatarPreviewCanvas() {
-            const container = document.getElementById('avatar-preview-box');
-            previewScene = new THREE.Scene();
-            previewScene.background = new THREE.Color(0x161616);
-            
-            previewCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-            previewCamera.position.set(0, 2.2, 4.5);
-            previewCamera.lookAt(0, 1.8, 0);
-
-            previewRenderer = new THREE.WebGLRenderer({ antialias: true });
-            previewRenderer.setSize(container.clientWidth, container.clientHeight);
-            container.appendChild(previewRenderer.domElement);
-
-            const pLight = new THREE.AmbientLight(0xffffff, 0.7); previewScene.add(pLight);
-            const pDir = new THREE.DirectionalLight(0xffffff, 0.6); pDir.position.set(5,10,5); previewScene.add(pDir);
-
-            previewModelGroup = new THREE.Group();
-            previewScene.add(previewModelGroup);
-
-            function runPreviewLoop() {
-                requestAnimationFrame(runPreviewLoop);
-                if (previewModelGroup) previewModelGroup.rotation.y += 0.015;
-                previewRenderer.render(previewScene, previewCamera);
-            }
-            runPreviewLoop();
-            previewAvatar();
-        }
-
-        window.selectAccessory = function(accType) {
-            activeSelectedAccessory = accType;
-            document.querySelectorAll('.acc-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`acc-${accType}`).classList.add('active');
-            previewAvatar();
+        window.selectPublishedRoom = function(roomCode) {
+            document.getElementById('search-room-input').value = roomCode;
         };
 
-        window.previewAvatar = function() {
-            if (!previewModelGroup) return;
-            while(previewModelGroup.children.length > 0) { previewModelGroup.remove(previewModelGroup.children[0]); }
-            
-            const dummyColors = {
-                head: document.getElementById('av-head-col').value,
-                torso: document.getElementById('av-torso-col').value,
-                larm: document.getElementById('av-larm-col').value,
-                rarm: document.getElementById('av-rarm-col').value,
-                lleg: document.getElementById('av-lleg-col').value,
-                rleg: document.getElementById('av-rleg-col').value
-            };
-            const rig = createProceduralR6Rig(dummyColors, activeSelectedAccessory);
-            // Realign root anchor location inside preview frame environment
-            rig.position.y = 0.5;
-            previewModelGroup.add(rig);
-        };
-
-        // --- CLASSIC ROBLOX-STYLE HIGH FIDELITY R6 COMPOSITE AVATAR RIG MATRIX ---
-        function createProceduralR6Rig(colorConfig, accessoryType) {
-            const r6RootGroup = new THREE.Group();
-
-            const cHead = new THREE.MeshStandardMaterial({ color: colorConfig.head || "#ffd4a3", roughness: 0.5 });
-            const cTorso = new THREE.MeshStandardMaterial({ color: colorConfig.torso || "#00e1ff", roughness: 0.5 });
-            const cLarm = new THREE.MeshStandardMaterial({ color: colorConfig.larm || "#ffd4a3", roughness: 0.5 });
-            const cRarm = new THREE.MeshStandardMaterial({ color: colorConfig.rarm || "#ffd4a3", roughness: 0.5 });
-            const cLleg = new THREE.MeshStandardMaterial({ color: colorConfig.lleg || "#333333", roughness: 0.5 });
-            const cRleg = new THREE.MeshStandardMaterial({ color: colorConfig.rleg || "#333333", roughness: 0.5 });
-
-            // 1. Torso Segment Base Hub (2x2x1 dimensions standard box relative scaling)
-            const torsoMesh = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.45), cTorso);
-            torsoMesh.position.y = 1.45;
-            r6RootGroup.add(torsoMesh);
-
-            // 2. Head Component Segment Node Base
-            const headJoint = new THREE.Group();
-            headJoint.position.set(0, 0.55 + 0.25, 0); 
-            torsoMesh.add(headJoint);
-            const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), cHead);
-            headMesh.position.y = 0; 
-            headJoint.add(headMesh);
-
-            // Face Decal Overlay Setup (Classic smile configuration representation geometry)
-            const eyeGeom = new THREE.BoxGeometry(0.08, 0.08, 0.02);
-            const faceMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
-            const leftEye = new THREE.Mesh(eyeGeom, faceMat); leftEye.position.set(-0.12, 0.06, 0.26); headJoint.add(leftEye);
-            const rightEye = new THREE.Mesh(eyeGeom, faceMat); rightEye.position.set(0.12, 0.06, 0.26); headJoint.add(rightEye);
-            const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.02), faceMat); mouth.position.set(0, -0.08, 0.26); headJoint.add(mouth);
-
-            // Dynamic Accessory Decoration Mesh Attachments System
-            if(accessoryType && accessoryType !== 'none') {
-                const accGroup = new THREE.Group();
-                accGroup.position.y = 0.15;
-                if (accessoryType === 'visor') {
-                    const vMesh = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.14, 0.2), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 }));
-                    vMesh.position.set(0, 0, 0.18); accGroup.add(vMesh);
-                } else if (accessoryType === 'knight') {
-                    const hMesh = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.4, 0.56), new THREE.MeshStandardMaterial({ color: 0x778899 }));
-                    hMesh.position.y = 0.1; accGroup.add(hMesh);
-                    const plume = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.3), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-                    plume.position.set(0, 0.35, -0.1); accGroup.add(plume);
-                } else if (accessoryType === 'crown') {
-                    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.26, 0.12, 16), new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8 }));
-                    base.position.y = 0.15; accGroup.add(base);
-                    for(let i=0; i<4; i++){
-                        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.15, 4), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
-                        spike.position.set(Math.sin(i * Math.PI/2)*0.24, 0.22, Math.cos(i * Math.PI/2)*0.24);
-                        accGroup.add(spike);
-                    }
-                } else if (accessoryType === 'tophat') {
-                    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.03, 16), new THREE.MeshStandardMaterial({ color: 0x222222 }));
-                    brim.position.y = 0.12; accGroup.add(brim);
-                    const crownMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.4, 16), new THREE.MeshStandardMaterial({ color: 0x222222 }));
-                    crownMesh.position.y = 0.32; accGroup.add(crownMesh);
-                } else if (accessoryType === 'fedora') {
-                    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.02, 16), new THREE.MeshStandardMaterial({ color: 0x5c4033 }));
-                    brim.position.y = 0.12; brim.rotation.x = 0.05; accGroup.add(brim);
-                    const topHat = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.38), new THREE.MeshStandardMaterial({ color: 0x5c4033 }));
-                    topHat.position.y = 0.22; accGroup.add(topHat);
-                }
-                headJoint.add(accGroup);
-            }
-
-            // 3. Left Arm Limb Component Node Setup Pivot Point Configuration
-            const leftArmJoint = new THREE.Group();
-            leftArmJoint.position.set(-0.7, 0.35, 0); 
-            torsoMesh.add(leftArmJoint);
-            const leftArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 0.45), cLarm);
-            leftArmMesh.position.y = -0.35; 
-            leftArmJoint.add(leftArmMesh);
-
-            // 4. Right Arm Limb Component Node Setup
-            const rightArmJoint = new THREE.Group();
-            rightArmJoint.position.set(0.7, 0.35, 0); 
-            torsoMesh.add(rightArmJoint);
-            const rightArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 0.45), cRarm);
-            rightArmMesh.position.y = -0.35; 
-            rightArmJoint.add(rightArmMesh);
-
-            // 5. Left Leg Limb Component Node Setup
-            const leftLegJoint = new THREE.Group();
-            leftLegJoint.position.set(-0.245, -0.55, 0); 
-            torsoMesh.add(leftLegJoint);
-            const leftLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 0.45), cLleg);
-            leftLegMesh.position.y = -0.35; 
-            leftLegJoint.add(leftLegMesh);
-
-            // 6. Right Leg Limb Component Node Setup
-            const rightLegJoint = new THREE.Group();
-            rightLegJoint.position.set(0.245, -0.55, 0); 
-            torsoMesh.add(rightLegJoint);
-            const rightLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 0.45), cRleg);
-            rightLegMesh.position.y = -0.35; 
-            rightLegJoint.add(rightLegMesh);
-
-            // Group Bindings references initialization map object
-            r6RootGroup.userData = { torso: torsoMesh, head: headJoint, leftArm: leftArmJoint, rightArm: rightArmJoint, leftLeg: leftLegJoint, rightLeg: rightLegJoint };
-            return r6RootGroup;
-        }
-
-        // --- ROOM EXPLORER REFRESH PIPELINE ---
         function startPublishedGamesListener() {
-            onValue(ref(db, 'maps'), (snapshot) => {
+            const mapsRootRef = ref(db, 'maps');
+            onValue(mapsRootRef, (snapshot) => {
                 const scrollBox = document.getElementById('games-scroll-box');
-                if (!scrollBox) return; scrollBox.innerHTML = "";
+                if (!scrollBox) return;
+                scrollBox.innerHTML = "";
+
                 if (!snapshot.exists()) {
-                    scrollBox.innerHTML = `<div style="color:#777; font-size:0.8rem; text-align:center; padding:10px 0;">No directories registered</div>`;
+                    scrollBox.innerHTML = `<div style="color:#777; font-size:0.8rem; text-align:center; padding:10px 0;">No published public maps found.</div>`;
                     return;
                 }
-                let count = 0;
-                snapshot.forEach(child => {
-                    const cfg = child.val().config || {};
-                    if(cfg.isPublic === true || child.key === 'lobby') {
-                        count++;
-                        const row = document.createElement('div'); row.className = "game-item-row";
-                        row.onclick = () => document.getElementById('search-room-input').value = child.key;
-                        row.innerHTML = `<span class="game-item-name">🎮 Node: ${child.key.toUpperCase()}</span><span class="game-item-stats">Active Map Profile</span>`;
+
+                const mapsData = snapshot.val();
+                let hasRooms = false;
+
+                Object.keys(mapsData).forEach(roomKey => {
+                    const roomConfig = mapsData[roomKey].config || {};
+                    if (roomConfig.isPublic === true) {
+                        hasRooms = true;
+                        const blocksObj = mapsData[roomKey].blocks || {};
+                        const blocksCount = Object.keys(blocksObj).length;
+                        
+                        const row = document.createElement('div');
+                        row.className = "game-item-row";
+                        row.onclick = () => window.selectPublishedRoom(roomKey);
+
+                        row.innerHTML = `
+                            <span class="game-item-name">🎮 Room: ${roomKey.toUpperCase()}</span>
+                            <span class="game-item-stats">${blocksCount} objects</span>
+                        `;
                         scrollBox.appendChild(row);
                     }
                 });
-                if(count === 0) scrollBox.innerHTML = `<div style="color:#777; font-size:0.8rem; text-align:center;">No published instances active</div>`;
+
+                if(!hasRooms) {
+                    scrollBox.innerHTML = `<div style="color:#777; font-size:0.8rem; text-align:center; padding:10px 0;">No maps are currently marked as public.</div>`;
+                }
             });
         }
+        
+        startPublishedGamesListener();
 
-        window.toggleGuideModal = function(show) { document.getElementById('guide-modal').style.display = show ? 'flex' : 'none'; };
-        function requestPointerLock() { if (!gameInitialized || isStudioMode || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return; renderer.domElement.requestPointerLock(); }
+        window.toggleGuideModal = function(show) {
+            document.getElementById('guide-modal').style.display = show ? 'flex' : 'none';
+        };
+
+        function requestPointerLock() {
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) return;
+            if (!gameInitialized || isStudioMode || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            renderer.domElement.requestPointerLock();
+        }
 
         document.addEventListener('pointerlockchange', () => {
-            isPointerLocked = (document.pointerLockElement === renderer.domElement);
-            document.getElementById('lock-indicator').innerText = isPointerLocked ? "Mouse Captured (ESC to release)" : "Click frame workspace to catch cursor";
+            if (document.pointerLockElement === renderer.domElement) {
+                isPointerLocked = true;
+                document.getElementById('lock-indicator').innerText = "Mouse locked (Press ESC to unlock)";
+            } else {
+                isPointerLocked = false;
+                document.getElementById('lock-indicator').innerText = "Click screen to lock mouse";
+            }
         });
 
         function respawnPlayer() {
-            const dest = activeCheckpoint ? activeCheckpoint : spawnPoint;
-            localData.x = dest.x; localData.y = dest.y + 1.2; localData.z = dest.z;
-            localData.sittingOn = ""; velocityY = 0; isGrounded = false; inWater = false; isClimbing = false;
+            const targetSpawn = activeCheckpoint ? activeCheckpoint : spawnPoint;
+            localData.x = targetSpawn.x;
+            localData.y = targetSpawn.y + 1.5; 
+            localData.z = targetSpawn.z;
+            localData.sittingOn = "";
+            velocityY = 0;
+            isGrounded = false;
+            inWater = false;
+            isClimbing = false;
+            localData.isSubmerged = false;
             document.getElementById('jumpout-seat-btn').style.display = 'none';
+            document.getElementById('water-status-indicator').style.display = 'none';
+            document.getElementById('climb-status-indicator').style.display = 'none';
             if(playerRef) set(playerRef, localData);
         }
 
         window.toggleFlightMode = function(state) {
-            if(!isStudioMode) return; isFlying = state; velocityY = 0;
+            if(!isStudioMode) return;
+            isFlying = state;
+            velocityY = 0; 
             document.getElementById('studio-fly-toggle').checked = state;
             document.getElementById('fly-status-indicator').style.display = state ? 'block' : 'none';
         };
 
-        window.setDragAsset = function(type) { if(isStudioMode) draggedAssetType = type; };
-        
-        window.toggleAudioMute = function() {
-            audioMuted = !audioMuted; bgAudioElement.muted = audioMuted;
-            document.getElementById('mute-audio-btn').innerText = audioMuted ? "🔇 Muted" : "🔊 Audio Active";
-            if(!audioMuted && bgAudioElement.src) bgAudioElement.play().catch(e=>console.log(e));
+        window.setDragAsset = function(type) { 
+            if(!isStudioMode) return;
+            draggedAssetType = type; 
         };
 
-        // Custom base64 file buffer parser assignment module
-        document.getElementById('glb-uploader').addEventListener('change', function(e) {
+        document.getElementById('bgm-uploader').addEventListener('change', function(e) {
             if(!isStudioMode) return;
-            const file = e.target.files[0]; if (!file) return;
+            const file = e.target.files[0];
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = function(evt) {
-                base64MeshString = evt.target.result;
-                setDragAsset('glb');
-                alert("GLB payload captured internally! Drag and drop anywhere onto grid map canvas surface to test.");
+                const base64Audio = evt.target.result;
+                update(ref(db, `maps/${localData.room}/config`), { audioTrack: base64Audio });
             };
             reader.readAsDataURL(file);
         });
 
-        document.body.addEventListener('dragover', e => e.preventDefault());
-        document.body.addEventListener('drop', (e) => {
-            if (!isStudioMode || !gameInitialized || !draggedAssetType || e.clientX > window.innerWidth - 320) return;
-            const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-            const ray = new THREE.Raycaster(); ray.setFromCamera(mouse, camera);
-            const plane = new THREE.Plane(new THREE.Vector3(0,1,0), -Math.round(localData.y));
-            const hit = new THREE.Vector3();
-            if(ray.ray.intersectPlane(plane, hit)) {
-                let payload = {
-                    type: draggedAssetType, x: Math.round(hit.x), y: Math.round(localData.y), z: Math.round(hit.z),
-                    sx: 2, sy: 2, sz: 2, rx: 0, ry: 0, rz: 0, color: "#00e1ff", canCollide: true, isSpawn: false, code: ""
-                };
-                if(draggedAssetType==='seat') { payload.sy=0.6; payload.color="#ff9500"; }
-                if(draggedAssetType==='water') { payload.color="#3399ff"; payload.canCollide=false; }
-                if(draggedAssetType==='ladder') { payload.sx=1.5; payload.sy=3; payload.sz=0.2; payload.color="#ffcc00"; payload.canCollide=false; }
-                if(draggedAssetType==='checkpoint') { payload.sy=0.2; payload.color="#00ff66"; payload.code="player.setCheckpoint(thisBlock.x, thisBlock.y, thisBlock.z);"; }
-                if(draggedAssetType==='glb') payload.meshData = base64MeshString;
-
-                push(activeRoomBlocksRef, payload);
-            }
+        document.getElementById('glb-uploader').addEventListener('change', function(e) {
+            if(!isStudioMode) return;
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                base64MeshString = evt.target.result;
+                sendChatMessageToServer("System", "Custom mesh file buffer generated. Drag/Drop object item row to map grid to deploy.");
+            };
+            reader.readAsDataURL(file);
         });
 
-        window.enterGame = async function() {
-            const nickname = document.getElementById('username-input').value.trim();
-            const targetRoom = document.getElementById('search-room-input').value.trim().toLowerCase() || 'lobby';
-            const pass = document.getElementById('admin-pass-input').value.trim();
+        /* --- MOBILE HUD TOUCH LAYERS --- */
+        const joystickKnob = document.getElementById('joystick-knob');
+        const joystickContainer = document.getElementById('joystick-container');
+        const mobileJumpBtn = document.getElementById('mobile-jump-btn');
 
-            if(!nickname) return alert("Nickname input parameter undefined.");
+        window.addEventListener('touchstart', (e) => {
+            if (!gameInitialized) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.clientX < window.innerWidth / 2 && touchMoveId === null) {
+                    // Check if clicked inside or near joystick container boundaries
+                    const rect = joystickContainer.getBoundingClientRect();
+                    touchMoveId = touch.identifier;
+                    joystickStart.x = rect.left + rect.width / 2;
+                    joystickStart.y = rect.top + rect.height / 2;
+                } else if (touch.clientX >= window.innerWidth / 2 && touchLookId === null) {
+                    if (e.target === mobileJumpBtn) continue;
+                    touchLookId = touch.identifier;
+                    lastTouchLookPos.x = touch.clientX;
+                    lastTouchLookPos.y = touch.clientY;
+                }
+            }
+        }, { passive: true });
 
-            // Capture custom layout styles selection profile map matrix properties directly
-            localData.username = nickname;
-            localData.room = targetRoom;
-            localData.accessory = activeSelectedAccessory;
-            localData.colors = {
-                head: document.getElementById('av-head-col').value,
-                torso: document.getElementById('av-torso-col').value,
-                larm: document.getElementById('av-larm-col').value,
-                rarm: document.getElementById('av-rarm-col').value,
-                lleg: document.getElementById('av-lleg-col').value,
-                rleg: document.getElementById('av-rleg-col').value
-            };
+        window.addEventListener('touchmove', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === touchMoveId) {
+                    let dx = touch.clientX - joystickStart.x;
+                    let dy = touch.clientY - joystickStart.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const maxDist = 50;
+                    if (dist > maxDist) {
+                        dx = (dx / dist) * maxDist;
+                        dy = (dy / dist) * maxDist;
+                    }
+                    joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+                    joystickVector.x = dx / maxDist;
+                    joystickVector.y = dy / maxDist;
+                } else if (touch.identifier === touchLookId) {
+                    const dx = touch.clientX - lastTouchLookPos.x;
+                    const dy = touch.clientY - lastTouchLookPos.y;
+                    cameraYaw -= dx * 0.005;
+                    cameraPitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, cameraPitch - dy * 0.005));
+                    lastTouchLookPos.x = touch.clientX;
+                    lastTouchLookPos.y = touch.clientY;
+                }
+            }
+        }, { passive: true });
 
-            const snap = await get(ref(db, `maps/${targetRoom}/config`));
-            const cfg = snap.exists() ? snap.val() : null;
-            if(pass.length > 0) {
-                if(cfg && cfg.password && pass !== cfg.password) return alert("Admin Credentials validation fail.");
-                if(!cfg) await set(ref(db, `maps/${targetRoom}/config`), { password: pass, isPublic: false });
+        const endTouchHandler = (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === touchMoveId) {
+                    touchMoveId = null;
+                    joystickKnob.style.transform = `translate(0px, 0px)`;
+                    joystickVector.x = 0;
+                    joystickVector.y = 0;
+                } else if (touch.identifier === touchLookId) {
+                    touchLookId = null;
+                }
+            }
+        };
+        window.addEventListener('touchend', endTouchHandler, { passive: true });
+        window.addEventListener('touchcancel', endTouchHandler, { passive: true });
+
+        mobileJumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isMobileJumpPressed = true;
+        });
+        mobileJumpBtn.addEventListener('touchend', () => {
+            isMobileJumpPressed = false;
+        });
+
+        function createLocalCharacterMesh() {
+            const group = new THREE.Group();
+            
+            const headGeom = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+            const head = new THREE.Mesh(headGeom, headMat);
+            head.position.y = 1.3;
+            group.add(head);
+
+            const torsoGeom = new THREE.BoxGeometry(0.8, 1.0, 0.4);
+            const torsoMat = new THREE.MeshStandardMaterial({ color: localData.color });
+            const torso = new THREE.Mesh(torsoGeom, torsoMat);
+            torso.position.y = 0.5;
+            group.add(torso);
+
+            const limbMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            
+            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.9, 0.25), torsoMat);
+            lArm.position.set(-0.55, 0.55, 0);
+            group.add(lArm);
+            
+            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.9, 0.25), torsoMat);
+            rArm.position.set(0.55, 0.55, 0);
+            group.add(rArm);
+
+            const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.9, 0.28), limbMat);
+            lLeg.position.set(-0.22, -0.45, 0);
+            group.add(lLeg);
+
+            const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.9, 0.28), limbMat);
+            rLeg.position.set(0.22, -0.45, 0);
+            group.add(rLeg);
+
+            group.position.set(localData.x, localData.y, localData.z);
+            scene.add(group);
+            return { root: group, lArm, rArm, lLeg, rLeg, head, torso };
+        }
+
+        let localVisualModel = createLocalCharacterMesh();
+
+        function createRemotePlayerMesh(data) {
+            const group = new THREE.Group();
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.6), new THREE.MeshStandardMaterial({ color: 0xffdbac }));
+            head.position.y = 1.3; group.add(head);
+
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8,1.0,0.4), new THREE.MeshStandardMaterial({ color: data.color || 0x00e1ff }));
+            torso.position.y = 0.5; group.add(torso);
+
+            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torso.material); lArm.position.set(-0.55,0.55,0); group.add(lArm);
+            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torso.material); rArm.position.set(0.55,0.55,0); group.add(rArm);
+            const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), new THREE.MeshStandardMaterial({ color: 0x333333 })); lLeg.position.set(-0.22,-0.45,0); group.add(lLeg);
+            const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), lLeg.material); rLeg.position.set(0.22,-0.45,0); group.add(rLeg);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,256,64);
+            ctx.font = '24px Arial'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+            ctx.fillText(data.username || "Guest", 128, 40);
+            const txtTex = new THREE.CanvasTexture(canvas);
+            const nameplate = new THREE.Mesh(new THREE.PlaneGeometry(2, 0.5), new THREE.MeshBasicMaterial({ map: txtTex, transparent: true, side: THREE.DoubleSide }));
+            nameplate.position.y = 2.0; group.add(nameplate);
+
+            scene.add(group);
+            return { root: group, lArm, rArm, lLeg, rLeg, nameplate };
+        }
+
+        window.enterGame = function() {
+            let userIn = document.getElementById('username-input').value.trim();
+            let roomIn = document.getElementById('search-room-input').value.trim().toLowerCase();
+            let adminPass = document.getElementById('admin-pass-input').value;
+
+            if(!userIn) userIn = "Guest" + Math.floor(Math.random()*900);
+            if(!roomIn) roomIn = "lobby";
+
+            localData.username = userIn;
+            localData.room = roomIn;
+            
+            localVisualModel.torso.material.color.setHex(localData.color);
+
+            document.getElementById('room-indicator').innerText = "ROOM: " + roomIn.toUpperCase();
+
+            // Detect admin passcode layer match
+            if(adminPass === "matrixadmin99") {
                 isStudioMode = true;
+                document.getElementById('studio-sidebar').style.display = 'flex';
+                document.getElementById('lock-indicator').style.display = 'none';
             } else {
-                if(targetRoom !== 'lobby' && (!cfg || !cfg.isPublic)) return alert("Access Restriction: Workspace node profile configured private.");
+                isStudioMode = false;
+                document.getElementById('studio-sidebar').style.display = 'none';
+                document.getElementById('lock-indicator').style.display = 'block';
             }
 
             document.getElementById('home-menu').style.opacity = '0';
-            setTimeout(() => document.getElementById('home-menu').style.display='none', 450);
+            setTimeout(() => { document.getElementById('home-menu').style.display = 'none'; }, 500);
+
             document.getElementById('ui-container').style.display = 'flex';
             document.getElementById('room-stats-panel').style.display = 'flex';
             document.getElementById('chat-window').style.display = 'flex';
-            document.getElementById('room-indicator').innerText = `NODE: ${targetRoom.toUpperCase()}`;
+            
+            // Check if device is mobile to activate touch joysticks UI overlay layout
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                document.getElementById('mobile-hud').style.display = 'block';
+                document.getElementById('lock-indicator').style.display = 'none';
+            }
 
-            if(isStudioMode) document.getElementById('studio-sidebar').style.display = 'flex';
-
-            playerRef = ref(db, `rooms/${targetRoom}/players/${playerId}`);
-            activeRoomBlocksRef = ref(db, `maps/${targetRoom}/blocks`);
-            activeRoomChatRef = ref(db, `maps/${targetRoom}/chat`);
+            playerRef = ref(db, `rooms/${roomIn}/players/${playerId}`);
+            activeRoomBlocksRef = ref(db, `maps/${roomIn}/blocks`);
+            activeRoomChatRef = ref(db, `rooms/${roomIn}/chats`);
 
             set(playerRef, localData);
             onDisconnect(playerRef).remove();
 
-            // Realtime listeners instantiation block maps pipelines logic paths
-            onValue(activeRoomBlocksRef, (s) => {
-                const data = s.val() || {}; currentRoomBlocks = data;
-                blockMap.forEach((mesh, id) => { if(!data[id]){ scene.remove(mesh); blockMap.delete(id); }});
-                blockDataArray = []; spawnPoint = { x:0, y:1.5, z:0 };
+            // Establish listener matrices for other characters
+            onValue(ref(db, `rooms/${roomIn}/players`), (snapshot) => {
+                const data = snapshot.val() || {};
+                document.getElementById('stat-players-count').innerText = Object.keys(data).length;
+                
+                Object.keys(remotePlayers).forEach(id => {
+                    if (!data[id]) {
+                        scene.remove(remotePlayers[id].mesh.root);
+                        delete remotePlayers[id];
+                    }
+                });
 
                 Object.keys(data).forEach(id => {
-                    const b = data[id]; b.id = id; blockDataArray.push(b);
-                    if(b.isSpawn) spawnPoint = { x: b.x, y: b.y + b.sy/2 + 0.5, z: b.z };
-
-                    let mesh = blockMap.get(id);
-                    if(!mesh) {
-                        if(b.type === 'glb' && b.meshData) {
-                            mesh = new THREE.Group();
-                            try {
-                                const bytes = new Uint8Array(atob(b.meshData.split(',')[1]||b.meshData).split('').map(c=>c.charCodeAt(0)));
-                                gltfLoader.parse(bytes.buffer, '', (g) => {
-                                    g.scene.traverse(c => { if(c.isMesh && b.color) c.material.color.set(b.color); });
-                                    mesh.add(g.scene);
-                                });
-                            } catch(e){}
-                        } else {
-                            let geom = new THREE.BoxGeometry(1,1,1);
-                            if(b.type==='sphere') geom = new THREE.SphereGeometry(0.5,16,16);
-                            if(b.type==='cylinder') geom = new THREE.CylinderGeometry(0.5,0.5,1,16);
-                            mesh = new THREE.Mesh(geom, new THREE.MeshStandardMaterial({ color: b.color||0x00e1ff, transparent: b.type==='water', opacity: b.type==='water'?0.5:1 }));
-                        }
-                        scene.add(mesh); blockMap.set(id, mesh);
-                    }
-                    mesh.position.set(b.x, b.y, b.z);
-                    mesh.scale.set(b.sx||1, b.sy||1, b.sz||1);
-                    mesh.rotation.set(THREE.MathUtils.degToRad(b.rx||0), THREE.MathUtils.degToRad(b.ry||0), THREE.MathUtils.degToRad(b.rz||0));
-                });
-                document.getElementById('stat-shapes-count').innerText = Object.keys(data).length;
-            });
-
-            onValue(ref(db, `rooms/${targetRoom}/players`), (s) => {
-                const p = s.val() || {}; let pCount = 0;
-                Object.keys(playerMeshes).forEach(id => { if(!p[id]) { scene.remove(playerMeshes[id]); delete playerMeshes[id]; }});
-                Object.keys(p).forEach(id => {
-                    pCount++; if(id === playerId) return;
-                    const d = p[id]; let m = playerMeshes[id];
-                    if(!m) {
-                        m = createProceduralR6Rig(d.colors || {}, d.accessory);
-                        scene.add(m); playerMeshes[id] = m;
-                    }
-                    m.position.set(d.x, d.y - 0.9, d.z);
-                    m.rotation.y = d.rotY || 0;
-                    
-                    // Simple Limb swing synchronization loop logic mapping
-                    const t = performance.now()*0.001;
-                    const bones = m.userData;
-                    if(bones && d.isMoving) {
-                        bones.leftArm.rotation.x = Math.sin(t * 10) * 0.6; bones.rightArm.rotation.x = -Math.sin(t * 10) * 0.6;
-                        bones.leftLeg.rotation.x = -Math.sin(t * 10) * 0.6; bones.rightLeg.rotation.x = Math.sin(t * 10) * 0.6;
-                    } else if(bones) {
-                        bones.leftArm.rotation.x = 0; bones.rightArm.rotation.x = 0; bones.leftLeg.rotation.x = 0; bones.rightLeg.rotation.x = 0;
+                    if (id === playerId) return;
+                    if (!remotePlayers[id]) {
+                        remotePlayers[id] = { data: data[id], mesh: createRemotePlayerMesh(data[id]) };
+                    } else {
+                        remotePlayers[id].data = data[id];
                     }
                 });
-                document.getElementById('stat-players-count').innerText = pCount;
             });
 
+            // Sync structural design parts list
+            onValue(activeRoomBlocksRef, (snapshot) => {
+                const blocksData = snapshot.val() || {};
+                currentRoomBlocks = blocksData;
+                document.getElementById('stat-shapes-count').innerText = Object.keys(blocksData).length;
+                rebuildSceneBlocks(blocksData);
+            });
+
+            // Sync global layout rules configs
+            onValue(ref(db, `maps/${roomIn}/config`), (snapshot) => {
+                const config = snapshot.val() || {};
+                globalRoomConfig.playersCollide = !!config.playersCollide;
+                globalRoomConfig.isPublic = !!config.isPublic;
+                document.getElementById('room-players-collide').checked = globalRoomConfig.playersCollide;
+                document.getElementById('room-public-toggle').checked = globalRoomConfig.isPublic;
+
+                if (config.audioTrack) {
+                    if(bgAudioElement.src !== config.audioTrack) {
+                        bgAudioElement.src = config.audioTrack;
+                        if(!audioMuted) bgAudioElement.play().catch(()=>{});
+                    }
+                } else {
+                    bgAudioElement.pause();
+                    bgAudioElement.src = "";
+                }
+            });
+
+            // Active dialogue listener overlay channels
             onValue(activeRoomChatRef, (snapshot) => {
-                const data = snapshot.val(); if (!data) return;
-                const logs = document.getElementById('chat-logs'); logs.innerHTML = "";
-                Object.values(data).sort((a,b)=>a.time-b.time).slice(-25).forEach(m => {
-                    logs.innerHTML += `<div class="chat-msg"><span class="chat-tag">[${m.username}]:</span> ${m.text}</div>`;
+                const chats = snapshot.val() || {};
+                const logs = document.getElementById('chat-logs');
+                logs.innerHTML = "";
+                Object.keys(chats).sort().slice(-25).forEach(k => {
+                    const c = chats[k];
+                    const row = document.createElement('div');
+                    row.className = "chat-msg";
+                    row.innerHTML = `<span class="chat-tag">[${c.user}]:</span> ${escapeHTML(c.text)}`;
+                    logs.appendChild(row);
                 });
                 logs.scrollTop = logs.scrollHeight;
             });
 
-            localVisualModel.remove(localVisualModel.children[0]);
-            localVisualModel.add(createProceduralR6Rig(localData.colors, localData.accessory));
-
-            respawnPlayer();
             gameInitialized = true;
+            respawnPlayer();
         };
 
-        window.exitToHubMenu = function() { if(playerRef) remove(playerRef); location.reload(); };
-        window.addEventListener('keydown', e => { 
-            keys[e.key.toLowerCase()] = true; 
-            if(e.key === ' ' && localData.sittingOn) jumpOutSeat();
-            if(e.key.toLowerCase() === 'f' && isStudioMode) toggleFlightMode(!isFlying);
-        });
-        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+        window.updateRoomGlobalConfig = function() {
+            if(!isStudioMode) return;
+            const targetCollide = document.getElementById('room-players-collide').checked;
+            update(ref(db, `maps/${localData.room}/config`), { playersCollide: targetCollide });
+        };
 
-        window.addEventListener('mousedown', (e) => {
-            if(!gameInitialized || e.clientX > window.innerWidth - (isStudioMode?320:0)) return;
-            if(e.button === 0) { isLeftMouseDown = true; requestPointerLock(); }
-            if(e.button === 2) isRightMouseDown = true;
+        window.updateRoomVisibilityConfig = function() {
+            if(!isStudioMode) return;
+            const targetPub = document.getElementById('room-public-toggle').checked;
+            update(ref(db, `maps/${localData.room}/config`), { isPublic: targetPub });
+        };
 
-            if(isStudioMode && e.button === 0) {
-                const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-                const ray = new THREE.Raycaster(); ray.setFromCamera(mouse, camera);
-                const hits = ray.intersectObjects(Array.from(blockMap.values()), true);
-                if(hits.length > 0) {
-                    let rootObj = hits[0].object; while(rootObj.parent && rootObj.parent !== scene) rootObj = rootObj.parent;
-                    blockMap.forEach((mesh, id) => { if(mesh === rootObj) { draggingBlockId = id; openInspector(id, currentRoomBlocks[id]); }});
-                } else closeInspector();
+        window.toggleAudioMute = function() {
+            audioMuted = !audioMuted;
+            const btn = document.getElementById('mute-audio-btn');
+            if(audioMuted) {
+                bgAudioElement.pause();
+                btn.innerText = "🔇 Audio Muted";
+                btn.style.background = "#2b2b2b";
+                btn.style.color = "#ff3b30";
+            } else {
+                if(bgAudioElement.src) bgAudioElement.play().catch(()=>{});
+                btn.innerText = "🔊 Audio Active";
+                btn.style.background = "#4a4a4a";
+                btn.style.color = "#00ff66";
             }
-        });
+        };
 
-        window.addEventListener('mouseup', (e) => { if(e.button===0){isLeftMouseDown=false; draggingBlockId=null;} if(e.button===2) isRightMouseDown=false; });
-        window.addEventListener('mousemove', (e) => {
-            if(isPointerLocked && !isStudioMode) {
-                cameraYaw -= e.movementX * 0.0025;
-                cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch - e.movementY * 0.0025));
-            } else if(isStudioMode && isRightMouseDown) {
-                cameraYaw -= e.movementX * 0.003;
-                cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, cameraPitch - e.movementY * 0.003));
-            }
-            if(isStudioMode && draggingBlockId && isLeftMouseDown) {
-                const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-                const ray = new THREE.Raycaster(); ray.setFromCamera(mouse, camera);
-                const plane = new THREE.Plane(new THREE.Vector3(0,1,0), -currentRoomBlocks[draggingBlockId].y);
-                const hit = new THREE.Vector3();
-                if(ray.ray.intersectPlane(plane, hit)) {
-                    const b = currentRoomBlocks[draggingBlockId]; b.x = Math.round(hit.x); b.z = Math.round(hit.z);
-                    set(ref(db, `maps/${localData.room}/blocks/${draggingBlockId}`), b);
-                }
-            }
-        });
-
-        window.addEventListener('wheel', e => { if(gameInitialized) cameraZoomDistance = Math.max(0.5, Math.min(40, cameraZoomDistance + e.deltaY*0.04)); });
+        function escapeHTML(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
 
         window.sendChatMessage = function(e) {
-            e.preventDefault(); const input = document.getElementById('chat-input'); const msg = input.value.trim(); if(!msg) return;
-            push(activeRoomChatRef, { username: localData.username, text: msg, time: Date.now() });
-            input.value = ""; input.blur(); requestPointerLock();
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const txt = input.value.trim();
+            if(!txt) return;
+            sendChatMessageToServer(localData.username, txt);
+            input.value = "";
+            input.blur();
         };
 
-        function openInspector(id, b) {
-            selectedBlockId = id; document.getElementById('no-selection-msg').style.display = 'none'; document.getElementById('inspector-controls').style.display='flex';
-            document.getElementById('p-x').value = b.x; document.getElementById('p-y').value = b.y; document.getElementById('p-z').value = b.z;
-            document.getElementById('s-x').value = b.sx||1; document.getElementById('s-y').value = b.sy||1; document.getElementById('s-z').value = b.sz||1;
-            document.getElementById('r-x').value = b.rx||0; document.getElementById('r-y').value = b.ry||0; document.getElementById('r-z').value = b.rz||0;
-            document.getElementById('p-color').value = b.color||"#00e1ff"; document.getElementById('p-text-label').value = b.textLabel||"";
-            document.getElementById('p-cancollide').checked = (b.canCollide !== false); document.getElementById('p-isphysical').checked = !!b.isPhysical;
-            document.getElementById('p-code').value = b.code||"";
+        function sendChatMessageToServer(username, text) {
+            if(!activeRoomChatRef) return;
+            push(activeRoomChatRef, { user: username, text: text, timestamp: Date.now() });
         }
-        function closeInspector() { selectedBlockId = null; document.getElementById('no-selection-msg').style.display = 'block'; document.getElementById('inspector-controls').style.display='none'; }
-        window.deleteSelectedPart = function() { if(selectedBlockId) { remove(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`)); closeInspector(); }};
+
+        window.jumpOutSeat = function() {
+            if(!localData.sittingOn) return;
+            const seatObj = currentRoomBlocks[localData.sittingOn];
+            localData.sittingOn = "";
+            document.getElementById('jumpout-seat-btn').style.display = 'none';
+            if(seatObj) {
+                localData.y = seatObj.y + (seatObj.sy || 1) / 2 + 1.5;
+                localData.z = seatObj.z + (seatObj.sz || 1);
+            }
+            velocityY = 6;
+            if(playerRef) set(playerRef, localData);
+        };
+
+        window.exitToHubMenu = function() {
+            bgAudioElement.pause();
+            bgAudioElement.src = "";
+            if(playerRef) remove(playerRef);
+            location.reload();
+        };
+
+        function rebuildSceneBlocks(blocksData) {
+            blockMap.forEach((mesh) => scene.remove(mesh));
+            blockMap.clear();
+            blockDataArray = [];
+
+            spawnPoint = { x: 0, y: 1.5, z: 0 };
+            let hasSpawns = false;
+
+            Object.keys(blocksData).forEach(id => {
+                const b = blocksData[id];
+                b.id = id;
+                blockDataArray.push(b);
+
+                if (hiddenBlocks[id]) return;
+
+                if (b.isSpawn) {
+                    if(!hasSpawns) {
+                        spawnPoint = { x: b.x, y: b.y + (b.sy || 1)/2 + 0.5, z: b.z };
+                        hasSpawns = true;
+                    }
+                }
+
+                let geom;
+                if (b.type === 'sphere') geom = new THREE.SphereGeometry(0.5, 24, 24);
+                else if (b.type === 'cylinder') geom = new THREE.CylinderGeometry(0.5, 0.5, 1, 24);
+                else if (b.type === 'cone') geom = new THREE.ConeGeometry(0.5, 1, 24);
+                else if (b.type === 'torus') geom = new THREE.TorusGeometry(0.4, 0.15, 12, 24);
+                else if (b.type === 'capsule') geom = new THREE.CapsuleGeometry(0.35, 0.5, 8, 16);
+                else if (b.type === 'wedge') {
+                    geom = new THREE.BufferGeometry();
+                    const vertices = new Float32Array([
+                        -0.5,-0.5,-0.5,  0.5,-0.5,-0.5,  0.5,-0.5, 0.5,
+                        -0.5,-0.5,-0.5,  0.5,-0.5, 0.5, -0.5,-0.5, 0.5,
+                        -0.5,-0.5,-0.5, -0.5, 0.5,-0.5,  0.5,-0.5,-0.5,
+                         0.5,-0.5,-0.5, -0.5, 0.5,-0.5,  0.5, 0.5,-0.5,
+                        -0.5,-0.5, 0.5,  0.5,-0.5, 0.5, -0.5, 0.5,-0.5,
+                         0.5,-0.5, 0.5,  0.5, 0.5,-0.5, -0.5, 0.5,-0.5,
+                        -0.5,-0.5,-0.5, -0.5,-0.5, 0.5, -0.5, 0.5,-0.5,
+                         0.5,-0.5,-0.5,  0.5, 0.5,-0.5,  0.5,-0.5, 0.5
+                    ]);
+                    geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                    geom.computeVertexNormals();
+                } else {
+                    geom = new THREE.BoxGeometry(1, 1, 1);
+                }
+
+                let mat;
+                if(b.type === 'water') {
+                    mat = new THREE.MeshStandardMaterial({ color: 0x3399ff, transparent: true, opacity: 0.6, roughness: 0.1 });
+                } else if(b.type === 'ladder') {
+                    mat = new THREE.MeshStandardMaterial({ color: 0xffcc00, wireframe: true });
+                } else {
+                    mat = new THREE.MeshStandardMaterial({ color: b.color || 0xaaaaaa, roughness: 0.4 });
+                }
+
+                let mesh = new THREE.Mesh(geom, mat);
+                
+                if (b.type === 'anim_rig') {
+                    mesh = buildAnimationRigMesh(b);
+                } else if (b.meshData) {
+                    mesh = new THREE.Group();
+                    gltfLoader.parse(base64ToArrayBuffer(b.meshData.split(',')[1]), '', (gltf) => {
+                        mesh.add(gltf.scene);
+                    });
+                }
+
+                mesh.position.set(b.x, b.y, b.z);
+                mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
+                mesh.rotation.set(
+                    THREE.MathUtils.degToRad(b.rx || 0),
+                    THREE.MathUtils.degToRad(b.ry || 0),
+                    THREE.MathUtils.degToRad(b.rz || 0)
+                );
+
+                mesh.userData = { blockId: id };
+                scene.add(mesh);
+                blockMap.set(id, mesh);
+            });
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function buildAnimationRigMesh(b) {
+            const baseGroup = new THREE.Group();
+            
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.6), new THREE.MeshStandardMaterial({color: 0xffccaa}));
+            head.position.y = 1.3;
+            head.name = "head";
+            head.rotation.y = THREE.MathUtils.degToRad(b.rigHead || 0);
+            baseGroup.add(head);
+
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8,1.0,0.4), new THREE.MeshStandardMaterial({color: b.color || 0xff00e1}));
+            torso.position.y = 0.5;
+            baseGroup.add(torso);
+
+            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torso.material);
+            lArm.position.set(-0.55, 0.55, 0);
+            lArm.rotation.x = THREE.MathUtils.degToRad(b.rigLarm || 0);
+            baseGroup.add(lArm);
+
+            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25), torso.material);
+            rArm.position.set(0.55, 0.55, 0);
+            rArm.rotation.x = THREE.MathUtils.degToRad(b.rigRarm || 0);
+            baseGroup.add(rArm);
+
+            const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), new THREE.MeshStandardMaterial({color:0x222222}));
+            lLeg.position.set(-0.22, -0.45, 0);
+            lLeg.rotation.x = THREE.MathUtils.degToRad(b.rigLleg || 0);
+            baseGroup.add(lLeg);
+
+            const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.9,0.28), lLeg.material);
+            rLeg.position.set(0.22, -0.45, 0);
+            rLeg.rotation.x = THREE.MathUtils.degToRad(b.rigRleg || 0);
+            baseGroup.add(rLeg);
+
+            return baseGroup;
+        }
+
+        /* Keyboard Listeners */
+        window.addEventListener('keydown', (e) => {
+            if(document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            keys[e.key.toLowerCase()] = true;
+
+            if (e.key.toLowerCase() === 'f' && isStudioMode) {
+                toggleFlightMode(!isFlying);
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        /* Viewport Resizing Matrix Updates */
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        /* Mouse Drag & Drops Inspector triggers */
+        window.addEventListener('mousedown', (e) => {
+            if(!gameInitialized) return;
+            if(e.button === 0) {
+                isLeftMouseDown = true;
+                processSceneRaycastSelection(e);
+            }
+            if(e.button === 2) {
+                isRightMouseDown = true;
+                requestPointerLock();
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if(e.button === 0) { isLeftMouseDown = false; draggingBlockId = null; }
+            if(e.button === 2) isRightMouseDown = false;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isPointerLocked && !isStudioMode) {
+                cameraYaw -= e.movementX * 0.0025;
+                cameraPitch = Math.max(-Math.PI/2.1, Math.min(Math.PI/2.1, cameraPitch - e.movementY * 0.0025));
+            } else if (isStudioMode && isRightMouseDown) {
+                cameraYaw -= e.movementX * 0.003;
+                cameraPitch = Math.max(-Math.PI/2.1, Math.min(Math.PI/2.1, cameraPitch - e.movementY * 0.003));
+            }
+
+            if (isStudioMode && draggingBlockId && isLeftMouseDown) {
+                processBlockDraggingCoordinates(e);
+            }
+        });
+
+        window.addEventListener('wheel', (e) => {
+            if(!gameInitialized) return;
+            cameraZoomDistance = Math.max(minZoom, Math.min(maxZoom, cameraZoomDistance + e.deltaY * 0.04));
+        }, { passive: true });
+
+        function processSceneRaycastSelection(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.closest('#studio-sidebar') || e.target.closest('#ui-container')) return;
+            
+            const mouse = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const meshes = Array.from(blockMap.values());
+            const intersects = raycaster.intersectObjects(meshes, true);
+
+            if(intersects.length > 0) {
+                let hitMesh = intersects[0].object;
+                while(hitMesh.parent && !hitMesh.userData.blockId) {
+                    hitMesh = hitMesh.parent;
+                }
+                const bId = hitMesh.userData.blockId;
+                if (bId) {
+                    selectedBlockId = bId;
+                    draggingBlockId = bId;
+                    loadPartPropertiesIntoInspector(currentRoomBlocks[bId]);
+                    return;
+                }
+            }
+
+            // If left clicked on Sky/Empty ground grid plane with an asset selected in studio toolbars
+            if (isStudioMode && draggedAssetType) {
+                const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                const targetWorldPos = new THREE.Vector3();
+                raycaster.ray.intersectPlane(plane, targetWorldPos);
+                
+                const newBlockKey = "block_" + Math.random().toString(36).substr(2, 9);
+                const spawnObj = {
+                    x: Math.round(targetWorldPos.x), y: 0.5, z: Math.round(targetWorldPos.z),
+                    sx: 2, sy: 1, sz: 2, rx: 0, ry: 0, rz: 0,
+                    color: draggedAssetType === 'water' ? "#3399ff" : "#00e1ff",
+                    canCollide: draggedAssetType !== 'water',
+                    type: draggedAssetType
+                };
+                if (base64MeshString) {
+                    spawnObj.meshData = base64MeshString;
+                    base64MeshString = ""; 
+                }
+                set(ref(db, `maps/${localData.room}/blocks/${newBlockKey}`), spawnObj);
+                draggedAssetType = ""; 
+            } else {
+                selectedBlockId = null;
+                document.getElementById('no-selection-msg').style.display = 'block';
+                document.getElementById('inspector-controls').style.display = 'none';
+            }
+        }
+
+        function processBlockDraggingCoordinates(e) {
+            const mouse = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -currentRoomBlocks[draggingBlockId].y);
+            const intersection = new THREE.Vector3();
+            raycaster.ray.intersectPlane(plane, intersection);
+
+            if (intersection) {
+                update(ref(db, `maps/${localData.room}/blocks/${draggingBlockId}`), {
+                    x: parseFloat(intersection.x.toFixed(1)),
+                    z: parseFloat(intersection.z.toFixed(1))
+                });
+            }
+        }
+
+        function loadPartPropertiesIntoInspector(b) {
+            document.getElementById('no-selection-msg').style.display = 'none';
+            document.getElementById('inspector-controls').style.display = 'flex';
+
+            document.getElementById('p-x').value = b.x;
+            document.getElementById('p-y').value = b.y;
+            document.getElementById('p-z').value = b.z;
+            document.getElementById('s-x').value = b.sx || 1;
+            document.getElementById('s-y').value = b.sy || 1;
+            document.getElementById('s-z').value = b.sz || 1;
+            document.getElementById('r-x').value = b.rx || 0;
+            document.getElementById('r-y').value = b.ry || 0;
+            document.getElementById('r-z').value = b.rz || 0;
+            document.getElementById('p-color').value = b.color || "#aaaaaa";
+            document.getElementById('p-cancollide').checked = b.canCollide !== false;
+            document.getElementById('p-isphysical').checked = !!b.isPhysical;
+            document.getElementById('p-spawn').checked = !!b.isSpawn;
+            document.getElementById('p-respawntime').value = b.respawnTime || 0;
+            document.getElementById('p-code').value = b.code || "";
+            document.getElementById('p-text-label').value = b.textLabel || "";
+
+            if (b.type === 'anim_rig') {
+                document.getElementById('rig-pose-editor').style.display = 'block';
+                document.getElementById('rig-slider-head').value = b.rigHead || 0;
+                document.getElementById('rig-slider-larm').value = b.rigLarm || 0;
+                document.getElementById('rig-slider-rarm').value = b.rigRarm || 0;
+                document.getElementById('rig-slider-lleg').value = b.rigLleg || 0;
+                document.getElementById('rig-slider-rleg').value = b.rigRleg || 0;
+            } else {
+                document.getElementById('rig-pose-editor').style.display = 'none';
+            }
+        }
+
         window.updateSelectedProperty = function() {
             if(!selectedBlockId) return;
-            const b = currentRoomBlocks[selectedBlockId];
-            const payload = {
-                type: b.type,
-                x: parseFloat(document.getElementById('p-x').value), y: parseFloat(document.getElementById('p-y').value), z: parseFloat(document.getElementById('p-z').value),
-                sx: parseFloat(document.getElementById('s-x').value)||0.1, sy: parseFloat(document.getElementById('s-y').value)||0.1, sz: parseFloat(document.getElementById('s-z').value)||0.1,
-                rx: parseFloat(document.getElementById('r-x').value)||0, ry: parseFloat(document.getElementById('r-y').value)||0, rz: parseFloat(document.getElementById('r-z').value)||0,
-                color: document.getElementById('p-color').value, canCollide: document.getElementById('p-cancollide').checked, isPhysical: document.getElementById('p-isphysical').checked,
-                code: document.getElementById('p-code').value, textLabel: document.getElementById('p-text-label').value
+            const currentObj = currentRoomBlocks[selectedBlockId];
+            const updateObj = {
+                x: parseFloat(document.getElementById('p-x').value),
+                y: parseFloat(document.getElementById('p-y').value),
+                z: parseFloat(document.getElementById('p-z').value),
+                sx: parseFloat(document.getElementById('s-x').value) || 0.1,
+                sy: parseFloat(document.getElementById('s-y').value) || 0.1,
+                sz: parseFloat(document.getElementById('s-z').value) || 0.1,
+                rx: parseFloat(document.getElementById('r-x').value) || 0,
+                ry: parseFloat(document.getElementById('r-y').value) || 0,
+                rz: parseFloat(document.getElementById('r-z').value) || 0,
+                color: document.getElementById('p-color').value,
+                canCollide: document.getElementById('p-cancollide').checked,
+                isPhysical: document.getElementById('p-isphysical').checked,
+                isSpawn: document.getElementById('p-spawn').checked,
+                respawnTime: parseInt(document.getElementById('p-respawntime').value) || 0,
+                code: document.getElementById('p-code').value || "",
+                textLabel: document.getElementById('p-text-label').value || "",
+                type: currentObj.type || "brick"
             };
-            if(b.meshData) payload.meshData = b.meshData;
-            set(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`), payload);
+            if(currentObj.meshData) updateObj.meshData = currentObj.meshData;
+
+            if (currentObj.type === 'anim_rig') {
+                updateObj.rigHead = parseInt(document.getElementById('rig-slider-head').value) || 0;
+                updateObj.rigLarm = parseInt(document.getElementById('rig-slider-larm').value) || 0;
+                updateObj.rigRarm = parseInt(document.getElementById('rig-slider-rarm').value) || 0;
+                updateObj.rigLleg = parseInt(document.getElementById('rig-slider-lleg').value) || 0;
+                updateObj.rigRleg = parseInt(document.getElementById('rig-slider-rleg').value) || 0;
+            }
+
+            set(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`), updateObj);
         };
 
-        window.jumpOutSeat = function() { if(localData.sittingOn) { localData.sittingOn = ""; velocityY = 6; localData.y += 1.0; document.getElementById('jumpout-seat-btn').style.display='none'; }};
-        window.copyMapJSON = function() { navigator.clipboard.writeText(JSON.stringify(currentRoomBlocks,null,2)); alert("Copied!"); };
-        window.pasteMapOverrideJSON = function() { const raw = prompt("Paste map structural json payload:"); if(raw) set(activeRoomBlocksRef, JSON.parse(raw)); };
+        window.deleteSelectedPart = function() {
+            if(!selectedBlockId) return;
+            remove(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`));
+            selectedBlockId = null;
+            document.getElementById('no-selection-msg').style.display = 'block';
+            document.getElementById('inspector-controls').style.display = 'none';
+        };
 
-        // Core Local Character Initialization
-        const localVisualModel = new THREE.Group(); scene.add(localVisualModel);
-        const localMeshContainer = new THREE.Group(); localVisualModel.add(localMeshContainer);
+        window.copyMapJSON = function() {
+            const exportedStr = JSON.stringify(currentRoomBlocks, null, 2);
+            navigator.clipboard.writeText(exportedStr).then(() => {
+                alert("Map layout structure JSON string copied directly to your clipboard!");
+            });
+        };
+
+        window.pasteMapOverrideJSON = function() {
+            const raw = prompt("Paste full valid export schema map JSON text payload below:");
+            if(!raw) return;
+            try {
+                const parsed = JSON.parse(raw);
+                set(ref(db, `maps/${localData.room}/blocks`), parsed);
+            } catch(err) {
+                alert("Invalid configuration JSON structure payload.");
+            }
+        };
+
+        /* Physics & Interaction Loop Engine */
         const clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
             if (!gameInitialized) return;
 
-            const dt = Math.min(clock.getDelta(), 0.1);
-            const time = performance.now() * 0.001;
+            const delta = Math.min(clock.getDelta(), 0.1); 
+            const time = clock.getElapsedTime();
 
-            inWater = false; isClimbing = false;
-            let targetSeat = null;
+            let moveX = 0;
+            let moveZ = 0;
 
-            blockDataArray.forEach(b => {
-                const minX = b.x - (b.sx||1)/2, maxX = b.x + (b.sx||1)/2;
-                const minY = b.y - (b.sy||1)/2, maxY = b.y + (b.sy||1)/2;
-                const minZ = b.z - (b.sz||1)/2, maxZ = b.z + (b.sz||1)/2;
-                const px = localData.x, py = localData.y, pz = localData.z, r = 0.45;
+            // Keyboard input processing
+            if (keys['w'] || keys['arrowup']) moveZ -= 1;
+            if (keys['s'] || keys['arrowdown']) moveZ += 1;
+            if (keys['a'] || keys['arrowleft']) moveX -= 1;
+            if (keys['d'] || keys['arrowright']) moveX += 1;
 
-                if (px + r > minX && px - r < maxX && py + 1.2 > minY && py - 0.2 < maxY && pz + r > minZ && pz - r < maxZ) {
-                    if (b.type === 'water') inWater = true;
-                    if (b.type === 'ladder') isClimbing = true;
-                    if (b.type === 'seat' && !localData.sittingOn) targetSeat = b;
-
-                    if (b.code && b.code.trim().length > 0) {
-                        try {
-                            const playerCtx = { respawn: () => respawnPlayer(), teleport: (x,y,z)=>{localData.x=x; localData.y=y; localData.z=z;}, setCheckpoint: (x,y,z)=>{activeCheckpoint={x,y,z};} };
-                            const F = new Function('player', 'thisBlock', b.code + "\nif(typeof onTouch==='function') onTouch(player);");
-                            F(playerCtx, b);
-                        } catch(e){}
-                    }
-                }
-            });
-
-            document.getElementById('water-status-indicator').style.display = inWater ? 'block' : 'none';
-            document.getElementById('climb-status-indicator').style.display = isClimbing ? 'block' : 'none';
-
-            if(targetSeat && !localData.sittingOn && !keys[' ']) {
-                localData.sittingOn = targetSeat.id;
-                localData.x = targetSeat.x; localData.y = targetSeat.y + (targetSeat.sy||1)/2 + 0.6; localData.z = targetSeat.z;
-                velocityY = 0; isGrounded = true;
-                document.getElementById('jumpout-seat-btn').style.display = 'block';
+            // Merge Mobile Virtual Joystick Vector mapping rules
+            if (touchMoveId !== null) {
+                moveX += joystickVector.x;
+                moveZ += joystickVector.y;
             }
 
-            let moving = false; localData.state = "idle";
-            let moveX = 0, moveZ = 0;
+            let moving = (moveX !== 0 || moveZ !== 0);
 
-            if (!localData.sittingOn) {
-                // --- FIXED INVERTED CAMERA SPACE DIRECTIONS SYSTEMS RESOLUTION MOVEMENT LAYER ---
-                if (keys['w'] || keys['arrowup'])    { moveX -= Math.sin(cameraYaw); moveZ -= Math.cos(cameraYaw); }
-                if (keys['s'] || keys['arrowdown'])  { moveX += Math.sin(cameraYaw); moveZ += Math.cos(cameraYaw); }
-                if (keys['a'] || keys['arrowleft'])  { moveX -= Math.cos(cameraYaw); moveZ += Math.sin(cameraYaw); }
-                if (keys['d'] || keys['arrowright']) { moveX += Math.cos(cameraYaw); moveZ -= Math.sin(cameraYaw); }
+            if (localData.sittingOn) {
+                const seatMesh = blockMap.get(localData.sittingOn);
+                if (seatMesh) {
+                    localData.x = seatMesh.position.x;
+                    localData.y = seatMesh.position.y + (currentRoomBlocks[localData.sittingOn].sy || 1) / 2 + 0.4;
+                    localData.z = seatMesh.position.z;
+                    velocityY = 0;
+                }
+                if (keys[' '] || isMobileJumpPressed) {
+                    jumpOutSeat();
+                }
+            } else if (isFlying) {
+                let flySpeed = 15;
+                let forwardVec = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw)).normalize();
+                let rightVec = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw)).normalize();
 
-                const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
-                if (len > 0) {
-                    const speed = isFlying ? 15 : (inWater ? 3.5 : 7.5);
-                    localData.x += (moveX / len) * speed * dt;
-                    localData.z += (moveZ / len) * speed * dt;
-                    moving = true; localData.state = "walking";
+                localData.x += (forwardVec.x * moveZ + rightVec.x * moveX) * flySpeed * delta;
+                localData.z += (forwardVec.z * moveZ + rightVec.z * moveX) * flySpeed * delta;
+
+                if (keys[' '] || isMobileJumpPressed) localData.y += flySpeed * delta;
+                if (keys['shift']) localData.y -= flySpeed * delta;
+            } else {
+                // Ground character locomotion logic
+                let walkSpeed = inWater ? 4.5 : 9.0;
+                let directionAngle = cameraYaw;
+                
+                let inputVec = new THREE.Vector3(moveX, 0, moveZ);
+                if (moving) {
+                    inputVec.normalize();
+                    let forwardVec = new THREE.Vector3(-Math.sin(directionAngle), 0, -Math.cos(directionAngle));
+                    let rightVec = new THREE.Vector3(Math.cos(directionAngle), 0, -Math.sin(directionAngle));
+                    
+                    localData.x += (forwardVec.x * inputVec.z + rightVec.x * inputVec.x) * walkSpeed * delta;
+                    localData.z += (forwardVec.z * inputVec.z + rightVec.z * inputVec.x) * walkSpeed * delta;
                 }
 
-                if (isFlying) {
-                    localData.state = "flying";
-                    if(keys[' ']) localData.y += 8 * dt;
-                    if(keys['shift']) localData.y -= 8 * dt;
+                // Gravity logic and collision maps
+                if (inWater) {
+                    if (keys[' '] || isMobileJumpPressed) {
+                        velocityY = 4.0;
+                    } else if (keys['shift']) {
+                        velocityY = -4.0;
+                    } else {
+                        velocityY = Math.max(-2.0, velocityY - 9.8 * delta);
+                    }
+                    localData.y += velocityY * delta;
                 } else if (isClimbing) {
-                    localData.state = "climbing"; velocityY = 0;
-                    if (keys['w'] || keys['arrowup'] || keys[' ']) { localData.y += 4.5 * dt; moving = true; }
-                    else if (keys['s'] || keys['arrowdown']) { localData.y -= 4.5 * dt; moving = true; }
-                } else if (inWater) {
-                    localData.state = "swimming"; velocityY = 0;
-                    if(keys[' ']) localData.y += 4 * dt;
-                    if(keys['shift']) localData.y -= 4 * dt;
-                    localData.y -= 0.6 * dt; if(localData.y < 0.8) localData.y = 0.8;
+                    if (moving) {
+                        velocityY = -moveZ * 5.0;
+                    } else {
+                        velocityY = 0;
+                    }
+                    if (keys[' '] || isMobileJumpPressed) {
+                        isClimbing = false;
+                        velocityY = 7.0;
+                    }
+                    localData.y += velocityY * delta;
                 } else {
-                    velocityY -= 26 * dt; localData.y += velocityY * dt;
-                    if (localData.y <= 1.45) { localData.y = 1.45; velocityY = 0; isGrounded = true; } 
-                    else isGrounded = false;
-                    if (keys[' '] && isGrounded) { velocityY = 10.5; isGrounded = false; }
+                    velocityY -= 28.0 * delta; 
+                    localData.y += velocityY * delta;
+                }
+
+                // Global map interaction collisions checks
+                let highestGroundLevel = -20;
+                let hitAnyWater = false;
+                let hitAnyLadder = false;
+
+                const playerRadius = 0.4;
+                const playerHeight = 1.8;
+
+                blockDataArray.forEach(b => {
+                    const mesh = blockMap.get(b.id);
+                    if (!mesh) return;
+
+                    const pMinX = localData.x - playerRadius, pMaxX = localData.x + playerRadius;
+                    const pMinY = localData.y - 0.9, pMaxY = localData.y + 0.9;
+                    const pMinZ = localData.z - playerRadius, pMaxZ = localData.z + playerRadius;
+
+                    const bMinX = b.x - (b.sx || 1)/2, bMaxX = b.x + (b.sx || 1)/2;
+                    const bMinY = b.y - (b.sy || 1)/2, bMaxY = b.y + (b.sy || 1)/2;
+                    const bMinZ = b.z - (b.sz || 1)/2, bMaxZ = b.z + (b.sz || 1)/2;
+
+                    const collides = (pMinX <= bMaxX && pMaxX >= bMinX) &&
+                                     (pMinY <= bMaxY && pMaxY >= bMinY) &&
+                                     (pMinZ <= bMaxZ && pMaxZ >= bMinZ);
+
+                    if (collides) {
+                        if (b.type === 'water') {
+                            hitAnyWater = true;
+                            return;
+                        }
+                        if (b.type === 'ladder') {
+                            hitAnyLadder = true;
+                            return;
+                        }
+
+                        // Code handler block hook execute engine triggers
+                        if (b.code && !isStudioMode) {
+                            try {
+                                const playerAPI = {
+                                    respawn: () => respawnPlayer(),
+                                    teleport: (tx, ty, tz) => { localData.x = tx; localData.y = ty; localData.z = tz; },
+                                    setCheckpoint: (cx, cy, cz) => { activeCheckpoint = { x: cx, y: cy, z: cz }; }
+                                };
+                                const sandboxedFunc = new Function('player', b.code + `\nif(typeof onTouch === "function") { onTouch(player); }`);
+                                sandboxedFunc(playerAPI);
+                            } catch(e) {}
+                        }
+
+                        if (b.type === 'seat' && !localData.sittingOn && velocityY < 0) {
+                            localData.sittingOn = b.id;
+                            document.getElementById('jumpout-seat-btn').style.display = 'block';
+                            return;
+                        }
+
+                        if (b.canCollide !== false) {
+                            const overlapY = Math.min(pMaxY, bMaxY) - Math.max(pMinY, bMinY);
+                            if (pMinY + overlapY >= bMaxY - 0.25 && velocityY <= 0) {
+                                if (bMaxY > highestGroundLevel) {
+                                    highestGroundLevel = bMaxY + 0.9;
+                                }
+                            }
+                        }
+                    }
+                });
+
+                inWater = hitAnyWater;
+                document.getElementById('water-status-indicator').style.display = inWater ? 'block' : 'none';
+
+                if (hitAnyLadder && moving) {
+                    isClimbing = true;
+                } else if (!hitAnyLadder) {
+                    isClimbing = false;
+                }
+                document.getElementById('climb-status-indicator').style.display = isClimbing ? 'block' : 'none';
+
+                if (localData.y <= highestGroundLevel) {
+                    localData.y = highestGroundLevel;
+                    velocityY = 0;
+                    isGrounded = true;
+                    localData.state = moving ? "walking" : "idle";
+                } else {
+                    isGrounded = false;
+                    localData.state = "airborne";
+                }
+
+                if ((keys[' '] || isMobileJumpPressed) && isGrounded) {
+                    velocityY = 11.5;
+                    isGrounded = false;
+                }
+
+                if (localData.y < -40) {
+                    respawnPlayer();
                 }
             }
 
             localData.isMoving = moving;
-            isFirstPerson = (cameraZoomDistance <= 0.6);
+
+            /* Visual Character Transformation Pipeline */
+            localVisualModel.root.position.set(localData.x, localData.y, localData.z);
+            isFirstPerson = (cameraZoomDistance <= 0.8);
             document.getElementById('fps-view-indicator').style.display = isFirstPerson ? 'block' : 'none';
-            
-            // Resolve visibility toggle directly on composite children references array loop meshes
-            localVisualModel.children.forEach(c => c.visible = !isFirstPerson);
+            localVisualModel.root.visible = !isFirstPerson;
 
             if (isFirstPerson) {
-                localVisualModel.rotation.y = cameraYaw + Math.PI; localData.rotY = cameraYaw + Math.PI;
+                localVisualModel.root.rotation.y = cameraYaw + Math.PI;
+                localData.rotY = cameraYaw + Math.PI;
             } else if (moving) {
-                const moveAngle = Math.atan2(moveX, moveZ) + Math.PI;
-                localVisualModel.rotation.y = moveAngle; localData.rotY = moveAngle;
+                const moveAngle = Math.atan2(moveX, moveZ) + Math.PI + cameraYaw;
+                localVisualModel.root.rotation.y = moveAngle;
+                localData.rotY = moveAngle;
             }
 
-            if(playerRef) set(playerRef, localData);
-            localVisualModel.position.set(localData.x, localData.y - 1.45, localData.z);
+            // Limb Animation swing matrices calculations
+            if (moving && !isFlying && !localData.sittingOn) {
+                const swing = Math.sin(time * (inWater ? 6 : 12)) * 0.6;
+                localVisualModel.lArm.rotation.x = swing;
+                localVisualModel.rArm.rotation.x = -swing;
+                localVisualModel.lLeg.rotation.x = -swing;
+                localVisualModel.rLeg.rotation.x = swing;
+                localData.legSwing = swing;
+            } else {
+                localVisualModel.lArm.rotation.x = 0;
+                localVisualModel.rArm.rotation.x = 0;
+                localVisualModel.lLeg.rotation.x = 0;
+                localVisualModel.rLeg.rotation.x = 0;
+                localData.legSwing = 0;
+            }
 
-            // Animate procedural R6 child mesh limbs state vectors inside loop runtime dynamically
-            if(localVisualModel.children[0] && localVisualModel.children[0].children[0]) {
-                const b = localVisualModel.children[0].children[0].userData;
-                if(b) {
-                    if (localData.sittingOn) {
-                        b.leftArm.rotation.x = -0.5; b.rightArm.rotation.x = -0.5;
-                        b.leftLeg.rotation.x = -Math.PI/2; b.rightLeg.rotation.x = -Math.PI/2;
-                    } else if (moving) {
-                        const wave = Math.sin(time * 11);
-                        b.leftArm.rotation.x = wave * 0.7; b.rightArm.rotation.x = -wave * 0.7;
-                        b.leftLeg.rotation.x = -wave * 0.6; b.rightLeg.rotation.x = wave * 0.6;
-                    } else {
-                        b.leftArm.rotation.x = 0; b.rightArm.rotation.x = 0; b.leftLeg.rotation.x = 0; b.rightLeg.rotation.x = 0;
-                    }
+            // Multi-Player data syncer matrices stream pipes
+            if (playerRef && gameInitialized) {
+                set(playerRef, localData);
+            }
+
+            // Dynamic Sync updates for Remote Entities structures
+            Object.keys(remotePlayers).forEach(id => {
+                const rp = remotePlayers[id];
+                const p = rp.data;
+                rp.mesh.root.position.set(p.x, p.y, p.z);
+                rp.mesh.root.rotation.y = p.rotY || 0;
+                
+                if (p.isMoving) {
+                    rp.mesh.lArm.rotation.x = p.legSwing || 0;
+                    rp.mesh.rArm.rotation.x = -(p.legSwing || 0);
+                    rp.mesh.lLeg.rotation.x = -(p.legSwing || 0);
+                    rp.mesh.rLeg.rotation.x = p.legSwing || 0;
+                } else {
+                    rp.mesh.lArm.rotation.x = 0; rp.mesh.rArm.rotation.x = 0;
+                    rp.mesh.lLeg.rotation.x = 0; rp.mesh.rLeg.rotation.x = 0;
                 }
-            }
+                rp.mesh.nameplate.lookAt(camera.position);
+            });
 
-            const headHeight = 0.6;
-            const tx = localData.x, ty = localData.y + headHeight, tz = localData.z;
+            // Camera clipping calculations & positioning updates
+            const headHeight = 1.3;
+            const targetX = localData.x;
+            const targetY = localData.y + headHeight;
+            const targetZ = localData.z;
 
             if (isFirstPerson) {
-                camera.position.set(tx, ty, tz);
-                camera.lookAt(tx - Math.sin(cameraYaw)*Math.cos(cameraPitch), ty - Math.sin(cameraPitch), tz - Math.cos(cameraYaw)*Math.cos(cameraPitch));
+                camera.position.set(targetX, targetY, targetZ);
+                const lookTarget = new THREE.Vector3(
+                    targetX - Math.sin(cameraYaw) * Math.cos(cameraPitch),
+                    targetY + Math.sin(cameraPitch),
+                    targetZ - Math.cos(cameraYaw) * Math.cos(cameraPitch)
+                );
+                camera.lookAt(lookTarget);
             } else {
-                const ox = cameraZoomDistance * Math.sin(cameraYaw) * Math.cos(cameraPitch);
-                const oy = cameraZoomDistance * Math.sin(cameraPitch);
-                const oz = cameraZoomDistance * Math.cos(cameraYaw) * Math.cos(cameraPitch);
-                camera.position.set(tx + ox, ty + oy, tz + oz); camera.lookAt(tx, ty - 0.3, tz);
+                const offsetX = cameraZoomDistance * Math.sin(cameraYaw) * Math.cos(cameraPitch);
+                const offsetY = cameraZoomDistance * Math.sin(cameraPitch);
+                const offsetZ = cameraZoomDistance * Math.cos(cameraYaw) * Math.cos(cameraPitch);
+                camera.position.set(targetX + offsetX, targetY + offsetY, targetZ + offsetZ);
+                camera.lookAt(targetX, targetY - 0.3, targetZ);
             }
 
             renderer.render(scene, camera);
         }
 
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        startPublishedGamesListener();
-        initAvatarPreviewCanvas();
         animate();
     </script>
 </body>
