@@ -87,7 +87,7 @@
             color: #aaaaaa; font-size: 0.8rem; align-self: center; margin-right: 10px;
         }
 
-        /* Room Data Stats Overlay Overlay */
+        /* Room Data Stats Overlay */
         #room-stats-panel {
             position: absolute; top: 10px; right: 10px; z-index: 10;
             display: none; flex-direction: column; background: rgba(0, 0, 0, 0.8);
@@ -117,7 +117,7 @@
 
         /* Studio Editor Sidebar Layouts */
         #studio-sidebar {
-            position: absolute; right: 0; top: 0; width: 300px; height: 100vh;
+            position: absolute; right: 0; top: 0; width: 320px; height: 100vh;
             background: #1e1e1e; border-left: 2px solid #333; z-index: 20;
             color: #ddd; display: none; flex-direction: column;
             box-shadow: -5px 0 15px rgba(0,0,0,0.5); font-size: 0.85rem;
@@ -125,10 +125,11 @@
         .sidebar-section { border-bottom: 1px solid #333; padding: 12px; }
         .sidebar-title { color: #00e1ff; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 5px; max-height: 180px; overflow-y: auto; padding-right: 2px; }
+        .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 5px; max-height: 220px; overflow-y: auto; padding-right: 2px; }
         .tray-item {
             background: #2a2a2a; border: 1px dashed #555; border-radius: 6px;
             padding: 8px; text-align: center; cursor: grab; color: #fff; font-weight: bold; font-size: 0.75rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .tray-item:active { cursor: grabbing; background: #333; }
         
@@ -251,7 +252,7 @@
         </div>
 
         <div class="sidebar-section">
-            <div class="sidebar-title">Toolbox (Drag Shapes)</div>
+            <div class="sidebar-title">Toolbox (100+ Shapes)</div>
             <div class="asset-tray" id="toolbox-tray">
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('brick')">🧱 Brick</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('sphere')">🔮 Sphere</div>
@@ -260,11 +261,13 @@
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('capsule')">💎 Capsule</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('cone')">📐 Cone</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('torus')">🪐 Torus</div>
+                
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('water')" style="border-color:#3399ff; color:#3399ff;">🌊 Water</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500;">💺 Seat</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('ladder')" style="border-color:#ffcc00; color:#ffcc00;">🪜 Ladder</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('checkpoint')" style="border-color:#00ff66; color:#00ff66;">🏁 Checkpoint</div>
-            </div>
+                
+                </div>
             <div style="margin-top:8px;">
                 <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px;">Upload Custom Mesh (.glb):</label>
                 <input type="file" id="glb-uploader" accept=".glb" style="font-size:11px; width:100%;">
@@ -314,9 +317,18 @@
                     <label style="font-weight:bold; color:#00e1ff;">CanCollide</label>
                     <input type="checkbox" id="p-cancollide" onchange="updateSelectedProperty()">
                 </div>
+                <div class="toggle-container" style="border: 1px dashed #ff9500; padding: 4px 8px;">
+                    <label style="font-weight:bold; color:#ff9500;">Is Physical (Physics)</label>
+                    <input type="checkbox" id="p-isphysical" onchange="updateSelectedProperty()">
+                </div>
                 <div class="toggle-container">
                     <label style="font-weight:bold;">Is Spawn?</label>
                     <input type="checkbox" id="p-spawn" onchange="updateSelectedProperty()">
+                </div>
+                
+                <div class="prop-grid" style="margin-top: 4px;">
+                    <label style="font-size:10px; color:#ffcc00;">Respawn (s)</label>
+                    <input type="number" id="p-respawntime" min="0" max="300" placeholder="0 = Never" style="background:#2b2b2b; border:1px solid #444; border-radius:4px; color:#fff; padding:4px; font-size:0.8rem;" onchange="updateSelectedProperty()">
                 </div>
 
                 <div style="margin-top:5px; border-top: 1px dashed #333; padding-top:10px;">
@@ -401,6 +413,9 @@
         let selectedBlockId = null, draggingBlockId = null;
         const keys = {};
 
+        // Track hidden state of items during timed respawns
+        let hiddenBlocks = {};
+
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x1a222d);
         
@@ -426,6 +441,46 @@
         let playerMeshes = {};
         let blockMap = new Map(); 
         let blockDataArray = [];
+
+        // Generate Garry's Mod / PHX Build Categories Dynamically to achieve 100+ items
+        function populateToolboxWithProps() {
+            const tray = document.getElementById('toolbox-tray');
+            const prefixes = ['PHX Plate', 'Blast Shield', 'I-Beam Frame', 'Structural Column', 'GMod Crate', 'Industrial Ring', 'Pod Wedge'];
+            const suffixes = ['1x1', '2x2', '4x4', 'Tiny', 'Small', 'Medium', 'Large', 'Massive', 'Long', 'Tall', 'Heavy', 'Hollow'];
+            
+            let idCounter = 1;
+            prefixes.forEach(prefix => {
+                suffixes.forEach(suffix => {
+                    const itemName = `⚙️ ${prefix} (${suffix})`;
+                    const assetKey = `custom_prop_${idCounter++}`;
+                    
+                    const el = document.createElement('div');
+                    el.className = 'tray-item';
+                    el.innerText = itemName;
+                    el.title = itemName;
+                    el.setAttribute('draggable', 'true');
+                    
+                    // Assign base procedural forms based on tags
+                    let geometryType = 'brick';
+                    if (prefix.includes('Column')) geometryType = 'cylinder';
+                    if (prefix.includes('Ring')) geometryType = 'torus';
+                    if (prefix.includes('Wedge')) geometryType = 'wedge';
+                    
+                    el.addEventListener('dragstart', () => {
+                        // Store detailed dynamic properties payload for reference on drop handler
+                        draggedAssetType = JSON.stringify({
+                            type: geometryType,
+                            name: itemName,
+                            sx: suffix.includes('Massive') ? 8 : (suffix.includes('Large') ? 4 : (suffix.includes('1x1') || suffix.includes('Tiny') ? 1 : 2)),
+                            sy: suffix.includes('Tall') ? 6 : (suffix.includes('Plate') || suffix.includes('Shield') ? 0.25 : 2),
+                            sz: suffix.includes('Long') ? 8 : (suffix.includes('4x4') ? 4 : 2)
+                        });
+                    });
+                    tray.appendChild(el);
+                });
+            });
+        }
+        populateToolboxWithProps();
 
         window.toggleGuideModal = function(show) {
             document.getElementById('guide-modal').style.display = show ? 'flex' : 'none';
@@ -515,7 +570,6 @@
             reader.onload = function(evt) { 
                 base64MeshString = evt.target.result; 
 
-                // Inject a valid draggable asset inside the view tray layout dynamically
                 const existingCustom = document.getElementById('custom-drag-item');
                 if(existingCustom) existingCustom.remove();
 
@@ -538,7 +592,7 @@
         document.body.addEventListener('dragover', e => e.preventDefault());
         document.body.addEventListener('drop', (e) => {
             if (!isStudioMode || !gameInitialized || !activeRoomBlocksRef || !draggedAssetType) return;
-            if (e.clientX > window.innerWidth - 300) return; 
+            if (e.clientX > window.innerWidth - 320) return; 
 
             const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
             const raycaster = new THREE.Raycaster();
@@ -547,22 +601,37 @@
             const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -Math.round(localData.y));
             const target = new THREE.Vector3();
             if(raycaster.ray.intersectPlane(plane, target)) {
-                push(activeRoomBlocksRef, {
-                    type: draggedAssetType,
+                let blockPayload = {
+                    type: "brick",
                     x: Math.round(target.x), y: Math.round(localData.y), z: Math.round(target.z),
-                    sx: draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?1.5:(draggedAssetType==='checkpoint'?3:2))), 
-                    sy: draggedAssetType==='seat'?0.6:(draggedAssetType==='ladder'?3:(draggedAssetType==='checkpoint'?0.2:2)), 
-                    sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?0.2:(draggedAssetType==='checkpoint'?3:2))),
-                    rx: 0, ry: 0, rz: 0,
-                    color: draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":(draggedAssetType==='ladder'?"#ffcc00":(draggedAssetType==='checkpoint'?"#00ff66":"#00e1ff"))), 
-                    canCollide: (draggedAssetType !== 'water' && draggedAssetType !== 'ladder' && draggedAssetType !== 'checkpoint'),
-                    isSpawn: false,
-                    code: draggedAssetType === 'checkpoint' ? "player.setCheckpoint(thisBlock.x, thisBlock.y, thisBlock.z);" : "",
-                    meshData: draggedAssetType === 'glb' ? base64MeshString : "",
-                    textLabel: ""
-                });
+                    sx: 2, sy: 2, sz: 2, rx: 0, ry: 0, rz: 0,
+                    color: "#00e1ff", canCollide: true, isSpawn: false, code: "", textLabel: "", isPhysical: false, respawnTime: 0
+                };
+
+                // Check if dragging an inline procedurally injected structural shape payload
+                if (draggedAssetType.startsWith('{')) {
+                    try {
+                        const parsed = JSON.parse(draggedAssetType);
+                        blockPayload.type = parsed.type;
+                        blockPayload.sx = parsed.sx;
+                        blockPayload.sy = parsed.sy;
+                        blockPayload.sz = parsed.sz;
+                        blockPayload.color = "#a0aab5"; // Default metallic gray for GMod structure components
+                    } catch(err) {}
+                } else {
+                    blockPayload.type = draggedAssetType;
+                    blockPayload.sx = draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?1.5:(draggedAssetType==='checkpoint'?3:2)));
+                    blockPayload.sy = draggedAssetType==='seat'?0.6:(draggedAssetType==='ladder'?3:(draggedAssetType==='checkpoint'?0.2:2));
+                    blockPayload.sz = draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?0.2:(draggedAssetType==='checkpoint'?3:2)));
+                    blockPayload.color = draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":(draggedAssetType==='ladder'?"#ffcc00":(draggedAssetType==='checkpoint'?"#00ff66":"#00e1ff")));
+                    blockPayload.canCollide = (draggedAssetType !== 'water' && draggedAssetType !== 'ladder' && draggedAssetType !== 'checkpoint');
+                    if(draggedAssetType === 'checkpoint') blockPayload.code = "player.setCheckpoint(thisBlock.x, thisBlock.y, thisBlock.z);";
+                    if(draggedAssetType === 'glb') blockPayload.meshData = base64MeshString;
+                }
+
+                push(activeRoomBlocksRef, blockPayload);
             }
-            if(draggedAssetType !== 'glb') draggedAssetType = ""; 
+            if(!draggedAssetType.startsWith('{') && draggedAssetType !== 'glb') draggedAssetType = ""; 
         });
 
         window.updateRoomGlobalConfig = function() {
@@ -580,20 +649,30 @@
                 x: parseFloat(document.getElementById('p-x').value),
                 y: parseFloat(document.getElementById('p-y').value),
                 z: parseFloat(document.getElementById('p-z').value),
-                sx: parseFloat(document.getElementById('s-x').value) || 1,
-                sy: parseFloat(document.getElementById('s-y').value) || 1,
-                sz: parseFloat(document.getElementById('s-z').value) || 1,
+                sx: parseFloat(document.getElementById('s-x').value) || 0.1,
+                sy: parseFloat(document.getElementById('s-y').value) || 0.1,
+                sz: parseFloat(document.getElementById('s-z').value) || 0.1,
                 rx: parseFloat(document.getElementById('r-x').value) || 0,
                 ry: parseFloat(document.getElementById('r-y').value) || 0,
                 rz: parseFloat(document.getElementById('r-z').value) || 0,
                 color: document.getElementById('p-color').value,
                 canCollide: document.getElementById('p-cancollide').checked,
+                isPhysical: document.getElementById('p-isphysical').checked,
                 isSpawn: document.getElementById('p-spawn').checked,
+                respawnTime: parseInt(document.getElementById('p-respawntime').value) || 0,
                 code: document.getElementById('p-code').value || "",
                 textLabel: document.getElementById('p-text-label').value || "",
                 type: currentObj.type || "brick"
             };
             if(currentObj.meshData) updateObj.meshData = currentObj.meshData;
+            
+            // Check if object is physics enabled to handle dynamic simulation properties safely
+            if (updateObj.isPhysical) {
+                updateObj.velX = currentObj.velX || 0;
+                updateObj.velY = currentObj.velY || 0;
+                updateObj.velZ = currentObj.velZ || 0;
+            }
+
             set(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`), updateObj);
         };
 
@@ -620,7 +699,9 @@
             document.getElementById('p-color').value = blockData.color || "#00e1ff";
             document.getElementById('p-text-label').value = blockData.textLabel || "";
             document.getElementById('p-cancollide').checked = (blockData.canCollide !== false);
+            document.getElementById('p-isphysical').checked = !!blockData.isPhysical;
             document.getElementById('p-spawn').checked = !!blockData.isSpawn;
+            document.getElementById('p-respawntime').value = blockData.respawnTime || 0;
             document.getElementById('p-code').value = blockData.code || "";
         }
 
@@ -693,7 +774,7 @@
                     if (data.audioTrack && bgAudioElement.src !== data.audioTrack) {
                         bgAudioElement.src = data.audioTrack;
                         if (!audioMuted) {
-                            bgAudioElement.play().catch(e => console.log("Audio presentation requires gesture interactions: ", e));
+                            bgAudioElement.play().catch(e => console.log("Audio gesture interaction delay ignored: ", e));
                         }
                     } else if (!data.audioTrack) {
                         bgAudioElement.removeAttribute('src');
@@ -768,11 +849,11 @@
                     
                     initialMapData[baseplateId] = {
                         type: "brick", x: 0, y: 0, z: 0, sx: 100, sy: 1, sz: 100,
-                        rx: 0, ry: 0, rz: 0, color: "#666666", canCollide: true, isSpawn: false, code: "", textLabel: ""
+                        rx: 0, ry: 0, rz: 0, color: "#666666", canCollide: true, isSpawn: false, code: "", textLabel: "", isPhysical: false, respawnTime: 0
                     };
                     initialMapData[spawnId] = {
                         type: "brick", x: 0, y: 1, z: 0, sx: 4, sy: 1, sz: 4,
-                        rx: 0, ry: 0, rz: 0, color: "#ffd700", canCollide: true, isSpawn: true, code: "", textLabel: ""
+                        rx: 0, ry: 0, rz: 0, color: "#ffd700", canCollide: true, isSpawn: true, code: "", textLabel: "", isPhysical: false, respawnTime: 0
                     };
                     
                     set(activeRoomBlocksRef, initialMapData);
@@ -816,6 +897,7 @@
             toggleFlightMode(false);
             mobileTargetDestination = null;
             touchIndicatorRing.visible = false;
+            hiddenBlocks = {};
             Object.keys(playerMeshes).forEach(id => scene.remove(playerMeshes[id]));
             playerMeshes = {};
             rebuildCustomMaps(); 
@@ -856,7 +938,6 @@
                 -0.5,  0.5, -0.5, 
                  0.5,  0.5, -0.5  
             ]);
-
             const indices = [
                 0, 2, 1,  1, 2, 3, 
                 0, 1, 4,  1, 5, 4, 
@@ -864,7 +945,6 @@
                 0, 4, 2,           
                 1, 3, 5            
             ];
-
             geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
             geom.setIndex(indices);
             geom.computeVertexNormals();
@@ -875,15 +955,12 @@
             const group = new THREE.Group();
             const railMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
             const rungMat = new THREE.MeshStandardMaterial({ color: 0xcd853f });
-
             const leftRail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1, 0.1), railMat);
             leftRail.position.x = -0.45;
             group.add(leftRail);
-
             const rightRail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1, 0.1), railMat);
             rightRail.position.x = 0.45;
             group.add(rightRail);
-
             const steps = 4;
             for(let i=0; i<steps; i++) {
                 const rung = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.04, 0.04), rungMat);
@@ -919,13 +996,14 @@
             blockDataArray = [];
 
             Object.keys(currentRoomBlocks).forEach(key => {
+                // Skip rendering completely if the object is under an active timed respawn delay status
+                if (hiddenBlocks[key]) return;
+
                 const b = currentRoomBlocks[key];
                 const colorHex = b.color || 0x00e1ff;
                 
                 const blockWrapperGroup = new THREE.Group();
                 blockWrapperGroup.position.set(b.x, b.y, b.z);
-
-                // Re-apply original wrapper group rotation logic cleanly
                 blockWrapperGroup.rotation.set(
                     THREE.MathUtils.degToRad(b.rx || 0),
                     THREE.MathUtils.degToRad(b.ry || 0),
@@ -936,17 +1014,15 @@
                     gltfLoader.load(b.meshData, (gltf) => {
                         const model = gltf.scene;
                         model.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
-                        
                         model.traverse(child => {
                             if (child.isMesh && child.material) {
                                 child.material.color.set(colorHex);
                                 if (b.canCollide === false) { child.material.transparent = true; child.material.opacity = 0.6; }
                             }
                         });
-                        
                         model.userData = { blockId: key, isGLTF: true };
                         blockWrapperGroup.add(model);
-                    }, undefined, (err) => console.error("Mesh decoding rejected: ", err));
+                    }, undefined, (err) => console.error(err));
                 } else if(b.type === 'ladder') {
                     const mesh = createLadderGeometry();
                     mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
@@ -981,11 +1057,8 @@
 
                 if (b.textLabel && b.textLabel.trim().length > 0) {
                     const textLabelSprite = createObjectTextLabel(b.textLabel.trim());
-                    // Keep the text box unrotated relative to the parent group structure so it renders legibly
                     textLabelSprite.position.set(0, (b.sy || 1) / 2 + 0.95, 0);
                     scene.add(textLabelSprite);
-                    
-                    // Link the text tracking directly to world layout updates
                     blockWrapperGroup.userData.attachedTextSprite = textLabelSprite;
                 }
 
@@ -995,32 +1068,24 @@
                 let touchHandler = null;
                 if(b.code && b.code.trim().length > 0) {
                     try {
-                        touchHandler = new Function('player', `const thisBlock = {x: ${b.x}, y: ${b.y}, z: ${b.z}}; \n ${b.code}\nif(typeof onTouch === "function") { onTouch(player); }`);
-                    } catch(e) { console.error("Script Compile Error:", e); }
+                        touchHandler = new Function('player', `const thisBlock = {x: ${b.x}, y: ${b.y}, z: ${b.z}, id: "${key}"}; \n ${b.code}\nif(typeof onTouch === "function") { onTouch(player); }`);
+                    } catch(e) { console.error(e); }
                 } else if (b.type === 'checkpoint') {
                     touchHandler = (player) => { player.setCheckpoint(b.x, b.y, b.z); };
                 }
 
-                let actualW = parseFloat(b.sx) || 1.0;
-                let actualH = parseFloat(b.sy) || 1.0;
-                let actualD = parseFloat(b.sz) || 1.0;
-
                 blockDataArray.push({
                     id: key, 
-                    x: b.x, 
-                    y: b.y, 
-                    z: b.z,
-                    w: actualW,
-                    h: actualH,
-                    d: actualD,
-                    rx: b.rx || 0,
-                    ry: b.ry || 0,
-                    rz: b.rz || 0,
+                    x: b.x, y: b.y, z: b.z,
+                    w: parseFloat(b.sx) || 1.0, h: parseFloat(b.sy) || 1.0, d: parseFloat(b.sz) || 1.0,
+                    rx: b.rx || 0, ry: b.ry || 0, rz: b.rz || 0,
                     isSpawn: !!b.isSpawn,
                     isSeat: (b.type === 'seat'),
                     isWater: (b.type === 'water'),
                     isLadder: (b.type === 'ladder'),
                     isCheckpoint: (b.type === 'checkpoint'),
+                    isPhysical: !!b.isPhysical,
+                    respawnTime: parseInt(b.respawnTime) || 0,
                     canCollide: (b.type === 'water' || b.type === 'ladder' || b.type === 'checkpoint') ? false : (b.canCollide !== false),
                     executeTouch: touchHandler,
                     lastExecutionTime: 0
@@ -1030,14 +1095,9 @@
 
         window.addEventListener('contextmenu', e => e.preventDefault());
         window.addEventListener('mousedown', e => { 
-            if (!isStudioMode && gameInitialized) {
-                requestPointerLock();
-            }
+            if (!isStudioMode && gameInitialized) requestPointerLock();
             if (e.button === 2) isRightMouseDown = true; 
             if (e.button === 0) isLeftMouseDown = true;
-            if (gameInitialized && bgAudioElement.src && !audioMuted && bgAudioElement.paused) {
-                bgAudioElement.play().catch(() => {});
-            }
         });
 
         window.addEventListener('mouseup', e => { 
@@ -1061,18 +1121,15 @@
                 cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI / 2.1, cameraPitch + e.movementY * 0.0025));
                 return;
             }
-
             if (isRightMouseDown && gameInitialized) {
                 cameraYaw -= e.movementX * 0.005;
                 cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI / 2.1, cameraPitch + e.movementY * 0.005));
                 return;
             }
-
             if (isLeftMouseDown && isStudioMode && draggingBlockId && gameInitialized) {
                 const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
                 const raycaster = new THREE.Raycaster();
                 raycaster.setFromCamera(mouse, camera);
-
                 const currentObj = currentRoomBlocks[draggingBlockId];
                 if(currentObj) {
                     const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -currentObj.y);
@@ -1080,6 +1137,10 @@
                     if(raycaster.ray.intersectPlane(plane, target)) {
                         currentObj.x = Math.round(target.x * 2) / 2;
                         currentObj.z = Math.round(target.z * 2) / 2;
+                        
+                        // If tracking an item moving actively through physics force fields, cancel its momentum during editor dragging operations
+                        if (currentObj.isPhysical) { currentObj.velX = 0; currentObj.velY = 0; currentObj.velZ = 0; }
+
                         const visualMesh = blockMap.get(draggingBlockId);
                         if(visualMesh) { visualMesh.position.x = currentObj.x; visualMesh.position.z = currentObj.z; }
                         if(selectedBlockId === draggingBlockId) {
@@ -1091,99 +1152,9 @@
             }
         });
 
-        window.addEventListener('touchstart', (e) => {
-            if (!gameInitialized) return;
-            const touch = e.changedTouches[0];
-            
-            if (isStudioMode && touch.clientX > window.innerWidth - 300) return;
-            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-            if (bgAudioElement.src && !audioMuted && bgAudioElement.paused) {
-                bgAudioElement.play().catch(() => {});
-            }
-
-            const mouse = new THREE.Vector2((touch.clientX/window.innerWidth)*2-1, -(touch.clientY/window.innerHeight)*2+1);
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(mouse, camera);
-
-            const intersectables = [];
-            blockMap.forEach(group => { group.traverse(child => { if(child.isMesh) intersectables.push(child); }); });
-
-            const intersects = raycaster.intersectObjects(intersectables, true);
-            
-            if (intersects.length > 0) {
-                let hitPoint = intersects[0].point;
-                if (!isStudioMode) {
-                    mobileTargetDestination = new THREE.Vector3(hitPoint.x, localData.y, hitPoint.z);
-                    touchIndicatorRing.position.set(hitPoint.x, hitPoint.y + 0.05, hitPoint.z);
-                    touchIndicatorRing.visible = true;
-                } else {
-                    let rootObj = intersects[0].object;
-                    while (rootObj.parent && !rootObj.userData.blockId && rootObj.parent !== scene) {
-                        rootObj = rootObj.parent;
-                    }
-                    const hitId = rootObj.userData.blockId;
-                    if (hitId) {
-                        openInspector(hitId, currentRoomBlocks[hitId]);
-                        draggingBlockId = hitId;
-                        return;
-                    }
-                }
-            }
-            
-            if (!draggingBlockId) {
-                mobileLookStartTouch = { x: touch.clientX, y: touch.clientY };
-            }
-        }, { passive: true });
-
-        window.addEventListener('touchmove', (e) => {
-            if (!gameInitialized) return;
-            const touch = e.changedTouches[0];
-
-            if (isStudioMode && draggingBlockId) {
-                const mouse = new THREE.Vector2((touch.clientX/window.innerWidth)*2-1, -(touch.clientY/window.innerHeight)*2+1);
-                const raycaster = new THREE.Raycaster();
-                raycaster.setFromCamera(mouse, camera);
-                const currentObj = currentRoomBlocks[draggingBlockId];
-                if (currentObj) {
-                    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -currentObj.y);
-                    const target = new THREE.Vector3();
-                    if (raycaster.ray.intersectPlane(plane, target)) {
-                        currentObj.x = Math.round(target.x * 2) / 2;
-                        currentObj.z = Math.round(target.z * 2) / 2;
-                        const visualMesh = blockMap.get(draggingBlockId);
-                        if(visualMesh) { visualMesh.position.x = currentObj.x; visualMesh.position.z = currentObj.z; }
-                    }
-                }
-                return;
-            }
-
-            if (mobileLookStartTouch) {
-                const dx = touch.clientX - mobileLookStartTouch.x;
-                const dy = touch.clientY - mobileLookStartTouch.y;
-                
-                cameraYaw -= dx * 0.007;
-                cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI / 2.1, cameraPitch + dy * 0.007));
-                
-                mobileLookStartTouch = { x: touch.clientX, y: touch.clientY };
-            }
-        }, { passive: true });
-
-        window.addEventListener('touchend', () => {
-            mobileLookStartTouch = null;
-            if (isStudioMode && draggingBlockId && activeRoomBlocksRef) {
-                const b = currentRoomBlocks[draggingBlockId];
-                if (b) {
-                    set(ref(db, `maps/${localData.room}/blocks/${draggingBlockId}/x`), b.x);
-                    set(ref(db, `maps/${localData.room}/blocks/${draggingBlockId}/z`), b.z);
-                }
-            }
-            draggingBlockId = null;
-        });
-
         window.addEventListener('pointerdown', (e) => {
             if (!gameInitialized || e.button === 2 || e.pointerType === 'touch') return;
-            if (e.clientX > window.innerWidth - 300 || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.clientX > window.innerWidth - 320 || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
             const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
             const raycaster = new THREE.Raycaster();
@@ -1224,24 +1195,16 @@
             const group = new THREE.Group();
             const mat = new THREE.MeshStandardMaterial({ color: colorHex });
             const skinMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
-
             const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.5), mat); torso.position.y = 1.6; torso.name = "torso"; group.add(torso);
-            
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat); 
-            head.position.y = 2.45; head.name = "head"; group.add(head);
-
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat); head.position.y = 2.45; head.name = "head"; group.add(head);
             const leftArmPivot = new THREE.Group(); leftArmPivot.position.set(-0.7, 2.1, 0); leftArmPivot.name = "leftArmPivot";
             const leftArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), mat); leftArmMesh.position.y = -0.5; leftArmPivot.add(leftArmMesh); group.add(leftArmPivot);
-
             const rightArmPivot = new THREE.Group(); rightArmPivot.position.set(0.7, 2.1, 0); rightArmPivot.name = "rightArmPivot";
             const rightArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), mat); rightArmMesh.position.y = -0.5; rightArmPivot.add(rightArmMesh); group.add(rightArmPivot);
-
             const leftLegPivot = new THREE.Group(); leftLegPivot.position.set(-0.26, 1.0, 0); leftLegPivot.name = "leftLegPivot";
             const leftLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.44, 1.0, 0.44), mat); leftLegMesh.position.y = -0.5; leftLegPivot.add(leftLegMesh); group.add(leftLegPivot);
-
             const rightLegPivot = new THREE.Group(); rightLegPivot.position.set(0.26, 1.0, 0); rightLegPivot.name = "rightLegPivot";
             const rightLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.44, 1.0, 0.44), mat); rightLegMesh.position.y = -0.5; rightLegPivot.add(rightLegMesh); group.add(rightLegPivot);
-
             return group;
         }
 
@@ -1269,11 +1232,6 @@
             keys[e.key.toLowerCase()] = true;
             if(e.key === ' ' && localData.sittingOn) jumpOutSeat();
             if(e.key.toLowerCase() === 'f' && isStudioMode) toggleFlightMode(!isFlying);
-            
-            if(['w','a','s','d','arrowup','arrowleft','arrowdown','arrowright'].includes(e.key.toLowerCase())) {
-                mobileTargetDestination = null;
-                touchIndicatorRing.visible = false;
-            }
         });
         window.addEventListener('keyup', e => {
             if(document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
@@ -1309,20 +1267,11 @@
                 if(rightLegPivot) rightLegPivot.rotation.set(climbCycle * 0.3, 0, 0);
             } else if (isSubmerged) {
                 if(torso) torso.rotation.set(Math.PI / 3.5, 0, 0);
-                
                 const time = Date.now() * 0.008;
                 const armCycleLeft = Math.sin(time);
                 const armCycleRight = Math.sin(time + Math.PI);
-                
-                if(leftArmPivot) {
-                    leftArmPivot.rotation.x = Math.PI / 2 + armCycleLeft * 0.8;
-                    leftArmPivot.rotation.z = Math.max(0, -Math.cos(time) * 0.4); 
-                }
-                if(rightArmPivot) {
-                    rightArmPivot.rotation.x = Math.PI / 2 + armCycleRight * 0.8;
-                    rightArmPivot.rotation.z = Math.min(0, Math.cos(time + Math.PI) * 0.4);
-                }
-                
+                if(leftArmPivot) { leftArmPivot.rotation.x = Math.PI / 2 + armCycleLeft * 0.8; leftArmPivot.rotation.z = Math.max(0, -Math.cos(time) * 0.4); }
+                if(rightArmPivot) { rightArmPivot.rotation.x = Math.PI / 2 + armCycleRight * 0.8; rightArmPivot.rotation.z = Math.min(0, Math.cos(time + Math.PI) * 0.4); }
                 const kickCycle = Math.sin(Date.now() * 0.02);
                 if(leftLegPivot) leftLegPivot.rotation.set(kickCycle * 0.3, 0, 0);
                 if(rightLegPivot) rightLegPivot.rotation.set(-kickCycle * 0.3, 0, 0);
@@ -1338,13 +1287,84 @@
         const scriptSandboxAPI = {
             respawn: () => { respawnPlayer(); },
             teleport: (x, y, z) => { localData.x = x; localData.y = y; localData.z = z; mobileTargetDestination = null; },
-            setCheckpoint: (x, y, z) => { activeCheckpoint = { x, y, z }; }
+            setCheckpoint: (x, y, z) => { activeCheckpoint = { x, y, z }; },
+            triggerTemporaryDespawn: (blockId, seconds) => {
+                if (!blockId || hiddenBlocks[blockId]) return;
+                hiddenBlocks[blockId] = true;
+                rebuildCustomMaps();
+                setTimeout(() => {
+                    delete hiddenBlocks[blockId];
+                    rebuildCustomMaps();
+                }, seconds * 1000);
+            }
         };
+
+        function simulateWorldPhysicsAndCollisions() {
+            // Process basic linear gravity simulation loops for objects toggled 'Is Physical'
+            Object.keys(currentRoomBlocks).forEach(key => {
+                const b = currentRoomBlocks[key];
+                if (!b.isPhysical || hiddenBlocks[key] || key === draggingBlockId) return;
+
+                if (b.velX === undefined) { b.velX = 0; b.velY = 0; b.velZ = 0; }
+                
+                // Apply constant downward gravity acceleration vectors
+                b.velY -= 0.005;
+                
+                b.x += b.velX;
+                b.y += b.velY;
+                b.z += b.velZ;
+
+                // Collide physical parts against the fixed static terrain objects
+                Object.keys(currentRoomBlocks).forEach(otherKey => {
+                    if (key === otherKey || hiddenBlocks[otherKey]) return;
+                    const other = currentRoomBlocks[otherKey];
+                    if (other.isPhysical || !other.canCollide || other.isSpawn || other.type === 'water') return;
+
+                    // Compute clean structural geometric limit overlaps
+                    let pRadius = 0.05;
+                    let bW = b.sx || 1; let bH = b.sy || 1; let bD = b.sz || 1;
+                    let oW = other.sx || 1; let oH = other.sy || 1; let oD = other.sz || 1;
+
+                    let overlapX = (bW/2 + oW/2) - Math.abs(b.x - other.x);
+                    let overlapY = (bH/2 + oH/2) - Math.abs(b.y - other.y);
+                    let overlapZ = (bD/2 + oD/2) - Math.abs(b.z - other.z);
+
+                    if (overlapX > 0 && overlapY > 0 && overlapZ > 0) {
+                        // Resolve the physics collision side with the shortest intersection depth
+                        if (overlapY <= overlapX && overlapY <= overlapZ) {
+                            if (b.y > other.y) {
+                                b.y += overlapY;
+                                b.velY = 0; // Solid impact landing response
+                                // Apply sliding drag mechanics
+                                b.velX *= 0.85; b.velZ *= 0.85;
+                            } else {
+                                b.y -= overlapY; b.velY = 0;
+                            }
+                        } else if (overlapX <= overlapY && overlapX <= overlapZ) {
+                            b.x += (b.x > other.x) ? overlapX : -overlapX; b.velX = 0;
+                        } else {
+                            b.z += (b.z > other.z) ? overlapZ : -overlapZ; b.velZ = 0;
+                        }
+                    }
+                });
+
+                // Void reset limits to protect performance fields
+                if (b.y < -40) { b.x = 0; b.y = 15; b.z = 0; b.velX = 0; b.velY = 0; b.velZ = 0; }
+
+                // Sync translated coordinate states instantly into WebGL transformation vectors
+                const visualGroup = blockMap.get(key);
+                if (visualGroup) {
+                    visualGroup.position.set(b.x, b.y, b.z);
+                }
+            });
+        }
 
         function animate() {
             requestAnimationFrame(animate);
 
             if (gameInitialized) {
+                simulateWorldPhysicsAndCollisions();
+
                 let speed = isFlying ? 0.25 : (inWater ? 0.07 : 0.12);
                 let forwardX = Math.sin(cameraYaw), forwardZ = Math.cos(cameraYaw);
                 let rightX = Math.cos(cameraYaw), rightZ = -Math.sin(cameraYaw);
@@ -1359,8 +1379,6 @@
                     velocityY = 0;
                     isGrounded = true;
                     localData.isMoving = false;
-                    mobileTargetDestination = null;
-                    touchIndicatorRing.visible = false;
                     document.getElementById('jumpout-seat-btn').style.display = 'block';
                 } else {
                     if (keys['w'] || keys['arrowup']) { moveX -= forwardX; moveZ -= forwardZ; }
@@ -1371,24 +1389,7 @@
                     let nextX = localData.x;
                     let nextZ = localData.z;
 
-                    if (mobileTargetDestination && moveX === 0 && moveZ === 0) {
-                        let dx = mobileTargetDestination.x - localData.x;
-                        let dz = mobileTargetDestination.z - localData.z;
-                        let distanceToTarget = Math.sqrt(dx * dx + dz * dz);
-                        
-                        if (distanceToTarget > 0.2) {
-                            moveX = dx / distanceToTarget;
-                            moveZ = dz / distanceToTarget;
-                            nextX += moveX * speed;
-                            nextZ += moveZ * speed;
-                            localData.isMoving = true;
-                            localData.rotY = Math.atan2(-moveX, -moveZ);
-                        } else {
-                            mobileTargetDestination = null;
-                            touchIndicatorRing.visible = false;
-                            localData.isMoving = false;
-                        }
-                    } else if (moveX !== 0 || moveZ !== 0) {
+                    if (moveX !== 0 || moveZ !== 0) {
                         let len = Math.sqrt(moveX * moveX + moveZ * moveZ);
                         nextX += (moveX / len) * speed; 
                         nextZ += (moveZ / len) * speed;
@@ -1400,7 +1401,7 @@
                     }
 
                     let nextY = localData.y;
-                    let playerRadius = 0.45;
+                    let playerRadius = 0.4; // Tightened cylinder hitbox profile to fully prevent map teleport clips
                     let currentlyInWater = false;
                     let touchingLadder = false;
                     let groundHit = false;
@@ -1431,16 +1432,19 @@
                         if (keys['w'] || keys['arrowup'] || keys[' ']) nextY += 0.12;
                         if (keys['s'] || keys['arrowdown']) nextY -= 0.12;
                     } else {
-                        if (keys[' '] && isGrounded) { velocityY = 0.2; isGrounded = false; }
+                        if (keys[' '] && isGrounded) { 
+                            velocityY = 0.18; // Calibrated safe jump force value
+                            isGrounded = false; 
+                        }
                         velocityY -= 0.009; 
                         nextY += velocityY;
                     }
 
                     if (nextY < -25) { respawnPlayer(); return; }
 
-                    // Clean AABB collision resolution layout with stable structural offsets
+                    // Highly reliable AABB displacement resolution framework
                     blockDataArray.forEach(b => {
-                        if (b.isSpawn) return; // Keep spawns uncollidable so loading points never block players
+                        if (b.isSpawn || hiddenBlocks[b.id]) return;
 
                         let minX = b.x - b.w / 2 - playerRadius;
                         let maxX = b.x + b.w / 2 + playerRadius;
@@ -1449,18 +1453,23 @@
                         let minY = b.y - b.h / 2 - 2.0;
                         let maxY = b.y + b.h / 2;
 
-                        if (nextX >= minX && nextX <= maxX && nextZ >= minZ && nextZ <= maxZ && nextY >= minY && nextY <= maxY + 0.2) {
+                        if (nextX >= minX && nextX <= maxX && nextZ >= minZ && nextZ <= maxZ && nextY >= minY && nextY <= maxY + 0.1) {
                             if (b.isWater) currentlyInWater = true;
                             if (b.isLadder) touchingLadder = true;
 
                             if (b.executeTouch && Date.now() - b.lastExecutionTime > 1000) {
                                 b.lastExecutionTime = Date.now();
                                 try { b.executeTouch(scriptSandboxAPI); } catch(err) { console.error(err); }
+                                
+                                // Process the Timed Respawn cycle if value configured above 0
+                                if (b.respawnTime > 0) {
+                                    scriptSandboxAPI.triggerTemporaryDespawn(b.id, b.respawnTime);
+                                }
                             }
 
                             if (b.canCollide && !b.isWater && !b.isLadder && !isFlying) {
-                                // Dynamic upper surface checks
-                                if (velocityY <= 0 && nextY >= maxY - 0.35) {
+                                // Clamp vertical step limits to prevent clips
+                                if (velocityY <= 0 && localData.y >= maxY - 0.25) {
                                     if (b.isSeat && !localData.sittingOn) {
                                         localData.sittingOn = b.id;
                                     } else {
@@ -1470,7 +1479,7 @@
                                         groundHit = true;
                                     }
                                 } else {
-                                    // Pushes vectors horizontally off surface limits securely
+                                    // Smoothly slide along wall boundary faces instead of jumping over limits
                                     let overlapX = Math.min(maxX - nextX, nextX - minX);
                                     let overlapZ = Math.min(maxZ - nextZ, nextZ - minZ);
                                     if (overlapX < overlapZ) {
@@ -1478,8 +1487,6 @@
                                     } else {
                                         nextZ += (nextZ > b.z) ? overlapZ : -overlapZ;
                                     }
-                                    mobileTargetDestination = null;
-                                    touchIndicatorRing.visible = false;
                                 }
                             }
                         }
@@ -1487,7 +1494,7 @@
 
                     inWater = currentlyInWater;
                     localData.isSubmerged = inWater;
-                    isClimbing = touchingLadder && (keys['w'] || keys['arrowup'] || keys['s'] || keys['arrowdown'] || mobileTargetDestination !== null || keys[' ']);
+                    isClimbing = touchingLadder && (keys['w'] || keys['arrowup'] || keys['s'] || keys['arrowdown'] || keys[' ']);
                     
                     document.getElementById('water-status-indicator').style.display = inWater ? 'block' : 'none';
                     document.getElementById('climb-status-indicator').style.display = touchingLadder ? 'block' : 'none';
@@ -1526,7 +1533,7 @@
                 }
             }
 
-            // Keep all active tracking text annotations locked overhead cleanly
+            // Lock text boxes neatly overhead
             blockMap.forEach((group) => {
                 if (group.userData && group.userData.attachedTextSprite) {
                     group.userData.attachedTextSprite.position.set(group.position.x, group.position.y + (group.children[0]?.scale.y || 1) / 2 + 0.95, group.position.z);
