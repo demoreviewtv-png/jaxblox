@@ -266,8 +266,7 @@
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500;">💺 Seat</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('ladder')" style="border-color:#ffcc00; color:#ffcc00;">🪜 Ladder</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('checkpoint')" style="border-color:#00ff66; color:#00ff66;">🏁 Checkpoint</div>
-                
-                </div>
+            </div>
             <div style="margin-top:8px;">
                 <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px;">Upload Custom Mesh (.glb):</label>
                 <input type="file" id="glb-uploader" accept=".glb" style="font-size:11px; width:100%;">
@@ -996,7 +995,6 @@
             blockDataArray = [];
 
             Object.keys(currentRoomBlocks).forEach(key => {
-                // Skip rendering completely if the object is under an active timed respawn delay status
                 if (hiddenBlocks[key]) return;
 
                 const b = currentRoomBlocks[key];
@@ -1138,7 +1136,6 @@
                         currentObj.x = Math.round(target.x * 2) / 2;
                         currentObj.z = Math.round(target.z * 2) / 2;
                         
-                        // If tracking an item moving actively through physics force fields, cancel its momentum during editor dragging operations
                         if (currentObj.isPhysical) { currentObj.velX = 0; currentObj.velY = 0; currentObj.velZ = 0; }
 
                         const visualMesh = blockMap.get(draggingBlockId);
@@ -1300,28 +1297,23 @@
         };
 
         function simulateWorldPhysicsAndCollisions() {
-            // Process basic linear gravity simulation loops for objects toggled 'Is Physical'
             Object.keys(currentRoomBlocks).forEach(key => {
                 const b = currentRoomBlocks[key];
                 if (!b.isPhysical || hiddenBlocks[key] || key === draggingBlockId) return;
 
                 if (b.velX === undefined) { b.velX = 0; b.velY = 0; b.velZ = 0; }
                 
-                // Apply constant downward gravity acceleration vectors
                 b.velY -= 0.005;
                 
                 b.x += b.velX;
                 b.y += b.velY;
                 b.z += b.velZ;
 
-                // Collide physical parts against the fixed static terrain objects
                 Object.keys(currentRoomBlocks).forEach(otherKey => {
                     if (key === otherKey || hiddenBlocks[otherKey]) return;
                     const other = currentRoomBlocks[otherKey];
                     if (other.isPhysical || !other.canCollide || other.isSpawn || other.type === 'water') return;
 
-                    // Compute clean structural geometric limit overlaps
-                    let pRadius = 0.05;
                     let bW = b.sx || 1; let bH = b.sy || 1; let bD = b.sz || 1;
                     let oW = other.sx || 1; let oH = other.sy || 1; let oD = other.sz || 1;
 
@@ -1330,12 +1322,10 @@
                     let overlapZ = (bD/2 + oD/2) - Math.abs(b.z - other.z);
 
                     if (overlapX > 0 && overlapY > 0 && overlapZ > 0) {
-                        // Resolve the physics collision side with the shortest intersection depth
                         if (overlapY <= overlapX && overlapY <= overlapZ) {
                             if (b.y > other.y) {
                                 b.y += overlapY;
-                                b.velY = 0; // Solid impact landing response
-                                // Apply sliding drag mechanics
+                                b.velY = 0; 
                                 b.velX *= 0.85; b.velZ *= 0.85;
                             } else {
                                 b.y -= overlapY; b.velY = 0;
@@ -1348,10 +1338,8 @@
                     }
                 });
 
-                // Void reset limits to protect performance fields
                 if (b.y < -40) { b.x = 0; b.y = 15; b.z = 0; b.velX = 0; b.velY = 0; b.velZ = 0; }
 
-                // Sync translated coordinate states instantly into WebGL transformation vectors
                 const visualGroup = blockMap.get(key);
                 if (visualGroup) {
                     visualGroup.position.set(b.x, b.y, b.z);
@@ -1363,8 +1351,6 @@
             requestAnimationFrame(animate);
 
             if (gameInitialized) {
-                simulateWorldPhysicsAndCollisions();
-
                 let speed = isFlying ? 0.25 : (inWater ? 0.07 : 0.12);
                 let forwardX = Math.sin(cameraYaw), forwardZ = Math.cos(cameraYaw);
                 let rightX = Math.cos(cameraYaw), rightZ = -Math.sin(cameraYaw);
@@ -1401,7 +1387,7 @@
                     }
 
                     let nextY = localData.y;
-                    let playerRadius = 0.4; // Tightened cylinder hitbox profile to fully prevent map teleport clips
+                    let playerRadius = 0.4; 
                     let currentlyInWater = false;
                     let touchingLadder = false;
                     let groundHit = false;
@@ -1433,7 +1419,7 @@
                         if (keys['s'] || keys['arrowdown']) nextY -= 0.12;
                     } else {
                         if (keys[' '] && isGrounded) { 
-                            velocityY = 0.18; // Calibrated safe jump force value
+                            velocityY = 0.18; 
                             isGrounded = false; 
                         }
                         velocityY -= 0.009; 
@@ -1442,7 +1428,6 @@
 
                     if (nextY < -25) { respawnPlayer(); return; }
 
-                    // Highly reliable AABB displacement resolution framework
                     blockDataArray.forEach(b => {
                         if (b.isSpawn || hiddenBlocks[b.id]) return;
 
@@ -1461,14 +1446,12 @@
                                 b.lastExecutionTime = Date.now();
                                 try { b.executeTouch(scriptSandboxAPI); } catch(err) { console.error(err); }
                                 
-                                // Process the Timed Respawn cycle if value configured above 0
                                 if (b.respawnTime > 0) {
                                     scriptSandboxAPI.triggerTemporaryDespawn(b.id, b.respawnTime);
                                 }
                             }
 
                             if (b.canCollide && !b.isWater && !b.isLadder && !isFlying) {
-                                // Clamp vertical step limits to prevent clips
                                 if (velocityY <= 0 && localData.y >= maxY - 0.25) {
                                     if (b.isSeat && !localData.sittingOn) {
                                         localData.sittingOn = b.id;
@@ -1479,7 +1462,6 @@
                                         groundHit = true;
                                     }
                                 } else {
-                                    // Smoothly slide along wall boundary faces instead of jumping over limits
                                     let overlapX = Math.min(maxX - nextX, nextX - minX);
                                     let overlapZ = Math.min(maxZ - nextZ, nextZ - minZ);
                                     if (overlapX < overlapZ) {
@@ -1526,14 +1508,19 @@
 
                 const headNode = playerMeshes[playerId].getObjectByName("head");
                 const torsoNode = playerMeshes[playerId].getObjectByName("torso");
+                const nameTagNode = playerMeshes[playerId].children[1]; 
+
                 if (isFirstPerson) {
-                    if(headNode) headNode.visible = false; if(torsoNode) torsoNode.visible = false;
+                    if(headNode) headNode.visible = false; 
+                    if(torsoNode) torsoNode.visible = false;
+                    if(nameTagNode) nameTagNode.visible = false; 
                 } else {
-                    if(headNode) headNode.visible = true; if(torsoNode) torsoNode.visible = true;
+                    if(headNode) headNode.visible = true; 
+                    if(torsoNode) torsoNode.visible = true;
+                    if(nameTagNode) nameTagNode.visible = true; 
                 }
             }
 
-            // Lock text boxes neatly overhead
             blockMap.forEach((group) => {
                 if (group.userData && group.userData.attachedTextSprite) {
                     group.userData.attachedTextSprite.position.set(group.position.x, group.position.y + (group.children[0]?.scale.y || 1) / 2 + 0.95, group.position.z);
