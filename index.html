@@ -264,7 +264,7 @@
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500;">💺 Seat</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('ladder')" style="border-color:#ffcc00; color:#ffcc00;">🪜 Ladder</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('checkpoint')" style="border-color:#00ff66; color:#00ff66;">🏁 Checkpoint</div>
-                </div>
+            </div>
             <div style="margin-top:8px;">
                 <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px;">Upload Custom Mesh (.glb):</label>
                 <input type="file" id="glb-uploader" accept=".glb" style="font-size:11px; width:100%;">
@@ -928,13 +928,11 @@
                 blockWrapperGroup.position.set(b.x, b.y, b.z);
 
                 if (b.type === 'glb' && b.meshData) {
-                    // Safe async base64 block loader configuration via GLTFLoader
                     gltfLoader.load(b.meshData, (gltf) => {
                         const model = gltf.scene;
                         model.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
                         model.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
                         
-                        // Apply custom coloration overrides safely over the GLTF structure
                         model.traverse(child => {
                             if (child.isMesh && child.material) {
                                 child.material.color.set(colorHex);
@@ -986,6 +984,13 @@
                     blockWrapperGroup.add(textLabelSprite);
                 }
 
+                // Apply wrapper configurations natively to support local space computations downstream
+                blockWrapperGroup.rotation.set(
+                    THREE.MathUtils.degToRad(b.rx || 0),
+                    THREE.MathUtils.degToRad(b.ry || 0),
+                    THREE.MathUtils.degToRad(b.rz || 0)
+                );
+
                 scene.add(blockWrapperGroup);
                 blockMap.set(key, blockWrapperGroup);
 
@@ -1033,7 +1038,6 @@
             }
             if (e.button === 2) isRightMouseDown = true; 
             if (e.button === 0) isLeftMouseDown = true;
-            // Native fallback gesture rule handler to bypass browser audio rules inside initialization
             if (gameInitialized && bgAudioElement.src && !audioMuted && bgAudioElement.paused) {
                 bgAudioElement.play().catch(() => {});
             }
@@ -1097,7 +1101,6 @@
             if (isStudioMode && touch.clientX > window.innerWidth - 300) return;
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-            // Mobile context trigger handling to load audio
             if (bgAudioElement.src && !audioMuted && bgAudioElement.paused) {
                 bgAudioElement.play().catch(() => {});
             }
@@ -1341,6 +1344,11 @@
             setCheckpoint: (x, y, z) => { activeCheckpoint = { x, y, z }; }
         };
 
+        // Pre-allocate structural reference components outside runtime loops to prevent memory allocation drops
+        const playerPos = new THREE.Vector3();
+        const localPlayerPos = new THREE.Vector3();
+        const matrixWorldInverse = new THREE.Matrix4();
+
         function animate() {
             requestAnimationFrame(animate);
 
@@ -1404,12 +1412,63 @@
                     let playerHeight = 2.0;
                     let currentlyInWater = false;
                     let touchingLadder = false;
+                    let groundHit = false;
+
+                    // Compute multiplayer player push displacements before map bounding evaluations
+                    if (globalRoomConfig.playersCollide) {
+                        Object.keys(remotePlayers).forEach(id => {
+                            if (id === playerId || remotePlayers[id].room !== localData.room) return;
+                            let rp = remotePlayers[id];
+                            let dx = nextX - rp.x; let dz = nextZ - rp.z;
+                            let dist = Math.sqrt(dx*dx + dz*dz); let minDist = playerRadius * 2;
+                            if (dist < minDist && dist > 0.01) {
+                                let overlap = minDist - dist;
+                                nextX += (dx / dist) * overlap * 0.5;
+                                nextZ += (dz / dist) * overlap * 0.5;
+                            }
+                        });
+                    }
+
+                    if (isFlying || inWater) {
+                        isGrounded = false;
+                        velocityY = 0;
+                        if (keys[' ']) nextY += speed;
+                        if (keys['shift']) nextY -= speed;
+                        if (!keys[' '] && !keys['shift'] && inWater) nextY -= 0.01; 
+                    } else if (isClimbing) {
+                        isGrounded = false;
+                        velocityY = 0;
+                        if (keys['w'] || keys['arrowup'] || keys[' ']) nextY += 0.12;
+                        if (keys['s'] || keys['arrowdown']) nextY -= 0.12;
+                    } else {
+                        if (keys[' '] && isGrounded) { velocityY = 0.2; isGrounded = false; }
+                        velocityY -= 0.009; 
+                        nextY += velocityY;
+                    }
+
+                    if (nextY < -25) { respawnPlayer(); return; }
+
+                    // Process complete Oriented Bounding Box physics computations in a single localized check block
+                    playerPos.set(nextX, nextY, nextZ);
 
                     blockDataArray.forEach(b => {
-                        let withinX = localData.x >= b.x - b.w/2 - 0.3 && localData.x <= b.x + b.w/2 + 0.3;
-                        let withinY = localData.y >= b.y - b.h/2 - 0.2 && localData.y <= b.y + b.h/2 + 0.5;
-                        let withinZ = localData.z >= b.z - b.d/2 - 0.3 && localData.z <= b.z + b.d/2 + 0.3;
-                        
+                        const visualMesh = blockMap.get(b.id);
+                        if (!visualMesh) return;
+
+                        // Transform player world data array coordinates natively into block local matrix environments
+                        visualMesh.updateMatrixWorld();
+                        matrixWorldInverse.copy(visualMesh.matrixWorld).invert();
+                        localPlayerPos.copy(playerPos).applyMatrix4(matrixWorldInverse);
+
+                        // Calculate bounds offset parameters based on target block attributes
+                        const halfX = b.w / 2 + (b.canCollide ? playerRadius : 0.3);
+                        const halfY = b.h / 2 + (b.canCollide ? 0.0 : 0.3);
+                        const halfZ = b.d / 2 + (b.canCollide ? playerRadius : 0.3);
+
+                        const withinX = Math.abs(localPlayerPos.x) <= halfX;
+                        const withinY = localPlayerPos.y >= -b.h/2 - 0.2 && localPlayerPos.y <= b.h/2 + playerHeight;
+                        const withinZ = Math.abs(localPlayerPos.z) <= halfZ;
+
                         if (withinX && withinY && withinZ) {
                             if (b.isWater) currentlyInWater = true;
                             if (b.isLadder) touchingLadder = true;
@@ -1418,9 +1477,53 @@
                                 b.lastExecutionTime = Date.now();
                                 try { b.executeTouch(scriptSandboxAPI); } catch(err) { console.error("Script Runtime Error:", err); }
                             }
+
+                            if (b.canCollide && !b.isWater && !b.isLadder && !isFlying) {
+                                const surfaceTop = b.h / 2;
+                                
+                                // Determine if the player is landing directly over a rotated upper surface shelf configuration
+                                if (velocityY <= 0 && localPlayerPos.y >= surfaceTop - 0.4 && localPlayerPos.y <= surfaceTop + 0.25) {
+                                    if (b.isSeat && !localData.sittingOn) {
+                                        localData.sittingOn = b.id;
+                                    } else {
+                                        localPlayerPos.y = surfaceTop;
+                                        const worldSnapped = localPlayerPos.clone().applyMatrix4(visualMesh.matrixWorld);
+                                        nextY = worldSnapped.y;
+                                        
+                                        velocityY = 0;
+                                        isGrounded = true;
+                                        groundHit = true;
+                                        
+                                        // Re-sync analytical vectors downstream safely
+                                        playerPos.y = nextY;
+                                    }
+                                } else {
+                                    // Project pushing forces outwards along the thinnest local intersection plane boundary vectors
+                                    const dx = halfX - Math.abs(localPlayerPos.x);
+                                    const dz = halfZ - Math.abs(localPlayerPos.z);
+                                    
+                                    if (dx < dz) {
+                                        localPlayerPos.x += Math.sign(localPlayerPos.x) * dx;
+                                    } else {
+                                        localPlayerPos.z += Math.sign(localPlayerPos.z) * dz;
+                                    }
+                                    
+                                    const worldCorrected = localPlayerPos.clone().applyMatrix4(visualMesh.matrixWorld);
+                                    nextX = worldCorrected.x;
+                                    nextZ = worldCorrected.z;
+                                    
+                                    mobileTargetDestination = null;
+                                    touchIndicatorRing.visible = false;
+                                    
+                                    // Keep pre-allocated loop variables synchronized dynamically
+                                    playerPos.x = nextX;
+                                    playerPos.z = nextZ;
+                                }
+                            }
                         }
                     });
-                    
+
+                    // Flush calculations out to persistent engine models safely
                     inWater = currentlyInWater;
                     localData.isSubmerged = inWater;
                     isClimbing = touchingLadder && (keys['w'] || keys['arrowup'] || keys['s'] || keys['arrowdown'] || mobileTargetDestination !== null || keys[' ']);
@@ -1428,85 +1531,13 @@
                     document.getElementById('water-status-indicator').style.display = inWater ? 'block' : 'none';
                     document.getElementById('climb-status-indicator').style.display = touchingLadder ? 'block' : 'none';
 
-                    if (isFlying || inWater) {
+                    if (!groundHit && !localData.sittingOn && !isFlying && !inWater && !isClimbing) {
                         isGrounded = false;
-                        velocityY = 0;
-                        if (keys[' ']) nextY += speed;
-                        if (keys['shift']) nextY -= speed;
-                        if (!keys[' '] && !keys['shift'] && inWater) nextY -= 0.01; 
-
-                        localData.x = nextX;
-                        localData.z = nextZ;
-                        localData.y = nextY;
-                    } else if (isClimbing) {
-                        isGrounded = false;
-                        velocityY = 0;
-                        if (keys['w'] || keys['arrowup'] || keys[' ']) nextY += 0.12;
-                        if (keys['s'] || keys['arrowdown']) nextY -= 0.12;
-                        
-                        localData.x = nextX;
-                        localData.z = nextZ;
-                        localData.y = nextY;
-                    } else {
-                        if (keys[' '] && isGrounded) { velocityY = 0.2; isGrounded = false; }
-                        velocityY -= 0.009; 
-                        nextY += velocityY;
-
-                        if (nextY < -25) { respawnPlayer(); return; }
-
-                        let xCollides = false;
-                        blockDataArray.forEach(b => {
-                            if (!b.canCollide) return;
-                            let withinX = nextX + playerRadius >= b.x - b.w/2 && nextX - playerRadius <= b.x + b.w/2;
-                            let withinY = localData.y + playerHeight >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
-                            let withinZ = localData.z + playerRadius >= b.z - b.d/2 && localData.z - playerRadius <= b.z + b.d/2;
-                            if (withinX && withinY && withinZ) { xCollides = true; mobileTargetDestination = null; touchIndicatorRing.visible = false; }
-                        });
-                        if (!xCollides) localData.x = nextX;
-
-                        let zCollides = false;
-                        blockDataArray.forEach(b => {
-                            if (!b.canCollide) return;
-                            let withinX = localData.x + playerRadius >= b.x - b.w/2 && localData.x - playerRadius <= b.x + b.w/2;
-                            let withinY = localData.y + playerHeight >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
-                            let withinZ = nextZ + playerRadius >= b.z - b.d/2 && nextZ - playerRadius <= b.z + b.d/2;
-                            if (withinX && withinY && withinZ) { zCollides = true; mobileTargetDestination = null; touchIndicatorRing.visible = false; }
-                        });
-                        if (!zCollides) localData.z = nextZ;
-
-                        if (globalRoomConfig.playersCollide) {
-                            Object.keys(remotePlayers).forEach(id => {
-                                if (id === playerId || remotePlayers[id].room !== localData.room) return;
-                                let rp = remotePlayers[id];
-                                let dx = localData.x - rp.x; let dz = localData.z - rp.z;
-                                let dist = Math.sqrt(dx*dx + dz*dz); let minDist = playerRadius * 2;
-                                if (dist < minDist && dist > 0.01) {
-                                    let overlap = minDist - dist;
-                                    localData.x += (dx / dist) * overlap * 0.5;
-                                    localData.z += (dz / dist) * overlap * 0.5;
-                                }
-                            });
-                        }
-
-                        let groundHit = false;
-                        blockDataArray.forEach(b => {
-                            let withinX = localData.x + playerRadius >= b.x - b.w/2 && localData.x - playerRadius <= b.x + b.w/2;
-                            let withinZ = localData.z + playerRadius >= b.z - b.d/2 && localData.z - playerRadius <= b.z + b.d/2;
-                            if (withinX && withinZ) {
-                                let surfaceTop = b.y + b.h/2;
-                                if (velocityY <= 0 && nextY >= surfaceTop - 0.4 && nextY <= surfaceTop + 0.15) {
-                                    if (b.isSeat && !localData.sittingOn) {
-                                        localData.sittingOn = b.id;
-                                    } else if (b.canCollide) {
-                                        nextY = surfaceTop; velocityY = 0; isGrounded = true; groundHit = true;
-                                    }
-                                }
-                            }
-                        });
-
-                        if (!groundHit && !localData.sittingOn) isGrounded = false;
-                        if (!groundHit) localData.y = nextY;
                     }
+
+                    localData.x = nextX;
+                    localData.y = nextY;
+                    localData.z = nextZ;
                 }
 
                 localData.legSwing = (localData.isMoving && !isFlying && !isClimbing) ? (inWater ? Math.sin(Date.now() * 0.008) * 0.4 : Math.sin(Date.now() * 0.014) * 0.65) : 0;
