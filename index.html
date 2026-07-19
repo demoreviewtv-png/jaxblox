@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>JaxBlox Engine - Secure Sandbox & Mobile Framework</title>
+    <title>JaxBlox Engine - Secure Sandbox & Scripting Layer</title>
     <style>
         body {
             margin: 0; padding: 0; overflow: hidden;
@@ -25,6 +25,7 @@
             background: rgba(0, 0, 0, 0.85); padding: 30px; border-radius: 20px;
             border: 2px solid #00e1ff; text-align: center;
             box-shadow: 0 0 30px rgba(0, 225, 255, 0.3); max-width: 500px; width: 90%;
+            position: relative;
         }
         #home-card h1 {
             font-size: 2.5rem; margin: 0 0 5px 0; color: #00e1ff;
@@ -47,6 +48,28 @@
         }
         #play-btn:hover { background: #00bcd4; }
         
+        .help-menu-btn {
+            background: #2a2a2a; color: #00ff66; border: 1px solid #00ff66;
+            padding: 8px 16px; border-radius: 15px; font-weight: bold; cursor: pointer;
+            margin-top: 12px; display: inline-block; font-size: 0.85rem;
+        }
+        .help-menu-btn:hover { background: rgba(0, 255, 102, 0.1); }
+
+        /* Guide Modal Overlay */
+        #guide-modal {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85); z-index: 200; display: none;
+            align-items: center; justify-content: center;
+        }
+        #guide-content {
+            background: #1e1e1e; border: 2px solid #00ff66; width: 85%; max-width: 550px;
+            padding: 25px; border-radius: 15px; color: #ddd; max-height: 75vh; overflow-y: auto;
+            text-align: left; box-shadow: 0 0 25px rgba(0,255,102,0.2);
+        }
+        #guide-content h2 { color: #00ff66; margin-top: 0; border-bottom: 1px dashed #444; padding-bottom: 8px; }
+        #guide-content code { background: #111; color: #ffcc00; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        #guide-content pre { background: #111; color: #00ff66; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 0.8rem; border: 1px solid #333; }
+
         /* Gameplay HUD Controls */
         #ui-container {
             position: absolute; top: 10px; left: 10px; z-index: 10;
@@ -88,6 +111,12 @@
             display: flex; justify-content: space-between; align-items: center; 
             background: #2a2a2a; padding: 8px; border-radius: 6px; margin-top: 5px;
         }
+
+        .code-editor-box {
+            width: 93%; height: 140px; background: #111; color: #00ff66;
+            font-family: monospace; font-size: 11px; border: 1px solid #444;
+            border-radius: 6px; padding: 6px; resize: none; margin-top: 5px; outline: none;
+        }
     </style>
     <script type="importmap">
         {
@@ -113,6 +142,29 @@
                 <input type="password" id="admin-pass-input" class="menu-input" style="width:90%; margin-bottom:0;" placeholder="Editor Password (Leave blank for player mode)">
             </div>
             <button id="play-btn" onclick="enterGame()">LAUNCH WORLD</button>
+            <br>
+            <button class="help-menu-btn" onclick="toggleGuideModal(true)">📖 SCRIPTING GUIDE</button>
+        </div>
+    </div>
+
+    <div id="guide-modal">
+        <div id="guide-content">
+            <h2>JaxBlox Scripting Guide</h2>
+            <p>Objects process custom JavaScript hooks automatically upon player contact. Code blocks must implement an <code>onTouch(player)</code> structure.</p>
+            
+            <h3 style="color:#00e1ff; margin-bottom:4px;">Available API Handlers:</h3>
+            <ul>
+                <li><code>player.respawn()</code> — Resets targeted character instantly to spawn location.</li>
+                <li><code>player.teleport(x, y, z)</code> — warps player coordinates instantly to specified vectors.</li>
+            </ul>
+
+            <h3 style="color:#00e1ff; margin-bottom:4px;">Example Execution Code:</h3>
+            <pre>function onTouch(player) {
+  // Teleports player to the sky
+  player.teleport(0, 20, 0);
+}</pre>
+            
+            <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:15px;" onclick="toggleGuideModal(false)">Close Guide Window</button>
         </div>
     </div>
 
@@ -120,6 +172,7 @@
         <span id="room-indicator" style="color:#00e1ff; font-weight:bold; margin-right:10px; font-size:0.9rem; align-self:center;">ROOM: LOBBY</span>
         <span id="fps-view-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none;">FIRST PERSON</span>
         <span id="water-status-indicator" style="color:#3399ff; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🌊 SWIMMING</span>
+        <span id="climb-status-indicator" style="color:#ffcc00; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">🧗 CLIMBING</span>
         <span id="fly-status-indicator" style="color:#00ff66; font-size:0.8rem; align-self:center; margin-right:10px; display:none; font-weight:bold;">FLYING (F)</span>
         <button id="jumpout-seat-btn" class="dashboard-btn" style="background:#ff9500; display:none; margin-right:10px;" onclick="jumpOutSeat()">Jump Out (Space)</button>
         <button class="dashboard-btn" style="background:#cc2900;" onclick="exitToHubMenu()">Disconnect</button>
@@ -149,7 +202,8 @@
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('cone')">📐 Cone</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('torus')">🪐 Torus</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('water')" style="border-color:#3399ff; color:#3399ff;">🌊 Water</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500; grid-column: span 2;">💺 Seat</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500;">💺 Seat</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('ladder')" style="border-color:#ffcc00; color:#ffcc00;">🪜 Ladder</div>
             </div>
             <div style="margin-top:8px;">
                 <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px;">Upload Custom Mesh (.glb):</label>
@@ -198,6 +252,12 @@
                     <label style="font-weight:bold;">Is Spawn?</label>
                     <input type="checkbox" id="p-spawn" onchange="updateSelectedProperty()">
                 </div>
+
+                <div style="margin-top:5px; border-top: 1px dashed #333; padding-top:10px;">
+                    <label style="font-weight:bold; color:#00ff66; display:block;">Object Code (onTouch):</label>
+                    <textarea id="p-code" class="code-editor-box" placeholder="/* API HELPER GUIDE:&#10; * player.respawn();&#10; * player.teleport(x, y, z);&#10; */&#10;function onTouch(player) {&#10;  player.respawn();&#10;}" onchange="updateSelectedProperty()"></textarea>
+                </div>
+
                 <button class="dashboard-btn" style="background:#ff3b30; width:100%; margin-top:10px;" onclick="deleteSelectedPart()">Delete Selected Object</button>
             </div>
         </div>
@@ -236,6 +296,7 @@
         let isStudioMode = false; 
         let isFlying = false;
         let inWater = false;
+        let isClimbing = false;
         
         let globalRoomConfig = { playersCollide: false };
         let localData = { 
@@ -290,6 +351,10 @@
         let blockMap = new Map(); 
         let blockDataArray = [];
 
+        window.toggleGuideModal = function(show) {
+            document.getElementById('guide-modal').style.display = show ? 'flex' : 'none';
+        };
+
         function respawnPlayer() {
             localData.x = spawnPoint.x;
             localData.y = spawnPoint.y + 1.5; 
@@ -298,11 +363,13 @@
             velocityY = 0;
             isGrounded = false;
             inWater = false;
+            isClimbing = false;
             localData.isSubmerged = false;
             mobileTargetDestination = null;
             touchIndicatorRing.visible = false;
             document.getElementById('jumpout-seat-btn').style.display = 'none';
             document.getElementById('water-status-indicator').style.display = 'none';
+            document.getElementById('climb-status-indicator').style.display = 'none';
             if(playerRef) set(playerRef, localData);
         }
 
@@ -344,13 +411,14 @@
                 push(activeRoomBlocksRef, {
                     type: draggedAssetType,
                     x: Math.round(target.x), y: Math.round(localData.y), z: Math.round(target.z),
-                    sx: draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:2), 
-                    sy: draggedAssetType==='seat'?0.6:2, 
-                    sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:2),
+                    sx: draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?1.5:2)), 
+                    sy: draggedAssetType==='seat'?0.6:(draggedAssetType==='ladder'?3:2), 
+                    sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:(draggedAssetType==='ladder'?0.2:2)),
                     rx: 0, ry: 0, rz: 0,
-                    color: draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":"#00e1ff"), 
-                    canCollide: (draggedAssetType !== 'water'),
+                    color: draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":(draggedAssetType==='ladder'?"#ffcc00":"#00e1ff")), 
+                    canCollide: (draggedAssetType !== 'water' && draggedAssetType !== 'ladder'),
                     isSpawn: false,
+                    code: "",
                     meshData: base64MeshString || ""
                 });
             }
@@ -381,6 +449,7 @@
                 color: document.getElementById('p-color').value,
                 canCollide: document.getElementById('p-cancollide').checked,
                 isSpawn: document.getElementById('p-spawn').checked,
+                code: document.getElementById('p-code').value || "",
                 type: currentObj.type || "brick"
             };
             if(currentObj.meshData) updateObj.meshData = currentObj.meshData;
@@ -410,6 +479,7 @@
             document.getElementById('p-color').value = blockData.color || "#00e1ff";
             document.getElementById('p-cancollide').checked = (blockData.canCollide !== false);
             document.getElementById('p-spawn').checked = !!blockData.isSpawn;
+            document.getElementById('p-code').value = blockData.code || "";
         }
 
         function closeInspector() {
@@ -485,11 +555,11 @@
                     
                     initialMapData[baseplateId] = {
                         type: "brick", x: 0, y: 0, z: 0, sx: 100, sy: 1, sz: 100,
-                        rx: 0, ry: 0, rz: 0, color: "#666666", canCollide: true, isSpawn: false
+                        rx: 0, ry: 0, rz: 0, color: "#666666", canCollide: true, isSpawn: false, code: ""
                     };
                     initialMapData[spawnId] = {
                         type: "brick", x: 0, y: 1, z: 0, sx: 4, sy: 1, sz: 4,
-                        rx: 0, ry: 0, rz: 0, color: "#ffd700", canCollide: true, isSpawn: true
+                        rx: 0, ry: 0, rz: 0, color: "#ffd700", canCollide: true, isSpawn: true, code: ""
                     };
                     
                     set(activeRoomBlocksRef, initialMapData);
@@ -567,19 +637,40 @@
                  0.5,  0.5, -0.5  // 5: Back top right
             ]);
 
-            // Outward-facing winding order sequence
             const indices = [
-                0, 2, 1,  1, 2, 3, // Bottom Face
-                0, 1, 4,  1, 5, 4, // Sloped Front Face
-                2, 3, 4,  3, 5, 4, // Vertical Back Face
-                0, 4, 2,           // Left Side Face
-                1, 3, 5            // Right Side Face
+                0, 2, 1,  1, 2, 3, 
+                0, 1, 4,  1, 5, 4, 
+                2, 3, 4,  3, 5, 4, 
+                0, 4, 2,           
+                1, 3, 5            
             ];
 
             geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
             geom.setIndex(indices);
             geom.computeVertexNormals();
             return geom;
+        }
+
+        function createLadderGeometry() {
+            const group = new THREE.Group();
+            const railMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
+            const rungMat = new THREE.MeshStandardMaterial({ color: 0xcd853f });
+
+            const leftRail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1, 0.1), railMat);
+            leftRail.position.x = -0.45;
+            group.add(leftRail);
+
+            const rightRail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1, 0.1), railMat);
+            rightRail.position.x = 0.45;
+            group.add(rightRail);
+
+            const steps = 4;
+            for(let i=0; i<steps; i++) {
+                const rung = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.04, 0.04), rungMat);
+                rung.position.y = -0.4 + (i * (0.8 / (steps - 1)));
+                group.add(rung);
+            }
+            return group;
         }
 
         function rebuildCustomMaps() {
@@ -591,35 +682,46 @@
                 const b = currentRoomBlocks[key];
                 const colorHex = b.isSpawn ? 0xffd700 : (b.color || 0x00e1ff);
                 
-                let geometry;
-                switch(b.type) {
-                    case 'sphere': geometry = new THREE.SphereGeometry(0.5, 24, 24); break;
-                    case 'wedge': geometry = createWedgeGeometry(); break;
-                    case 'cylinder': geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 24); break;
-                    case 'capsule': geometry = new THREE.CapsuleGeometry(0.35, 0.5, 8, 16); break;
-                    case 'cone': geometry = new THREE.ConeGeometry(0.5, 1, 24); break;
-                    case 'torus': geometry = new THREE.TorusGeometry(0.4, 0.15, 12, 48); break;
-                    default: geometry = new THREE.BoxGeometry(1, 1, 1);
-                }
-
-                let material;
-                if (b.type === 'water') {
-                    material = new THREE.MeshStandardMaterial({ color: 0x3399ff, transparent: true, opacity: 0.6, roughness: 0.1 });
+                let mesh;
+                if(b.type === 'ladder') {
+                    mesh = createLadderGeometry();
                 } else {
-                    material = new THREE.MeshStandardMaterial({ color: colorHex });
-                    if (b.canCollide === false) { material.transparent = true; material.opacity = 0.6; }
+                    let geometry;
+                    switch(b.type) {
+                        case 'sphere': geometry = new THREE.SphereGeometry(0.5, 24, 24); break;
+                        case 'wedge': geometry = createWedgeGeometry(); break;
+                        case 'cylinder': geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 24); break;
+                        case 'capsule': geometry = new THREE.CapsuleGeometry(0.35, 0.5, 8, 16); break;
+                        case 'cone': geometry = new THREE.ConeGeometry(0.5, 1, 24); break;
+                        case 'torus': geometry = new THREE.TorusGeometry(0.4, 0.15, 12, 48); break;
+                        default: geometry = new THREE.BoxGeometry(1, 1, 1);
+                    }
+
+                    let material;
+                    if (b.type === 'water') {
+                        material = new THREE.MeshStandardMaterial({ color: 0x3399ff, transparent: true, opacity: 0.6, roughness: 0.1 });
+                    } else {
+                        material = new THREE.MeshStandardMaterial({ color: colorHex });
+                        if (b.canCollide === false) { material.transparent = true; material.opacity = 0.6; }
+                    }
+                    mesh = new THREE.Mesh(geometry, material);
                 }
 
-                let mesh = new THREE.Mesh(geometry, material);
                 mesh.position.set(b.x, b.y, b.z);
                 mesh.scale.set(b.sx || 1, b.sy || 1, b.sz || 1);
                 mesh.rotation.set(THREE.MathUtils.degToRad(b.rx || 0), THREE.MathUtils.degToRad(b.ry || 0), THREE.MathUtils.degToRad(b.rz || 0));
 
-                mesh.userData = { blockId: key, isSeat: (b.type === 'seat'), isWater: (b.type === 'water') };
+                mesh.userData = { blockId: key, isSeat: (b.type === 'seat'), isWater: (b.type === 'water'), isLadder: (b.type === 'ladder') };
                 scene.add(mesh);
                 blockMap.set(key, mesh);
 
-                // Dynamically tracked parsing sizes for accurate collision bounds
+                let touchHandler = null;
+                if(b.code && b.code.trim().length > 0) {
+                    try {
+                        touchHandler = new Function('player', `${b.code}\nif(typeof onTouch === "function") { onTouch(player); }`);
+                    } catch(e) { console.error("Script Compile Error:", e); }
+                }
+
                 blockDataArray.push({
                     id: key, 
                     x: b.x, 
@@ -630,7 +732,10 @@
                     d: parseFloat(b.sz) || 1.0,
                     isSeat: (b.type === 'seat'),
                     isWater: (b.type === 'water'),
-                    canCollide: b.type === 'water' ? false : (b.canCollide !== false)
+                    isLadder: (b.type === 'ladder'),
+                    canCollide: (b.type === 'water' || b.type === 'ladder') ? false : (b.canCollide !== false),
+                    executeTouch: touchHandler,
+                    lastExecutionTime: 0
                 });
             });
         }
@@ -691,7 +796,7 @@
             const touch = e.changedTouches[0];
             
             if (isStudioMode && touch.clientX > window.innerWidth - 300) return;
-            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
             const mouse = new THREE.Vector2((touch.clientX/window.innerWidth)*2-1, -(touch.clientY/window.innerHeight)*2+1);
             const raycaster = new THREE.Raycaster();
@@ -772,7 +877,7 @@
 
         window.addEventListener('pointerdown', (e) => {
             if (!gameInitialized || e.button === 2 || e.pointerType === 'touch') return;
-            if (e.clientX > window.innerWidth - 300 || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            if (e.clientX > window.innerWidth - 300 || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
             const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
             const raycaster = new THREE.Raycaster();
@@ -841,7 +946,7 @@
         }
 
         window.addEventListener('keydown', e => {
-            if(document.activeElement.tagName === 'INPUT') return;
+            if(document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
             keys[e.key.toLowerCase()] = true;
             if(e.key === ' ' && localData.sittingOn) jumpOutSeat();
             if(e.key.toLowerCase() === 'f' && isStudioMode) toggleFlightMode(!isFlying);
@@ -852,13 +957,13 @@
             }
         });
         window.addEventListener('keyup', e => {
-            if(document.activeElement.tagName === 'INPUT') return;
+            if(document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
             keys[e.key.toLowerCase()] = false;
         });
         
         onValue(ref(db, 'players'), snap => { if(gameInitialized) remotePlayers = snap.val() || {}; });
 
-        function updateLimbAnimations(meshGroup, isMoving, swingAngle, isSitting, isSubmerged) {
+        function updateLimbAnimations(meshGroup, isMoving, swingAngle, isSitting, isSubmerged, climbingActive) {
             const leftLegPivot = meshGroup.getObjectByName("leftLegPivot");
             const rightLegPivot = meshGroup.getObjectByName("rightLegPivot");
             const leftArmPivot = meshGroup.getObjectByName("leftArmPivot");
@@ -871,6 +976,13 @@
                 if(rightLegPivot) rightLegPivot.rotation.set(-Math.PI / 2, 0, 0);
                 if(leftArmPivot) leftArmPivot.rotation.set(-Math.PI / 5, 0, 0);
                 if(rightArmPivot) rightArmPivot.rotation.set(-Math.PI / 5, 0, 0);
+            } else if (climbingActive) {
+                if(torso) torso.rotation.set(0, 0, 0);
+                const climbCycle = Math.sin(Date.now() * 0.012);
+                if(leftArmPivot) leftArmPivot.rotation.set(Math.PI - climbCycle * 0.5, 0, 0);
+                if(rightArmPivot) rightArmPivot.rotation.set(Math.PI + climbCycle * 0.5, 0, 0);
+                if(leftLegPivot) leftLegPivot.rotation.set(-climbCycle * 0.3, 0, 0);
+                if(rightLegPivot) rightLegPivot.rotation.set(climbCycle * 0.3, 0, 0);
             } else if (isSubmerged) {
                 if(torso) torso.rotation.set(Math.PI / 3.5, 0, 0);
                 
@@ -890,7 +1002,6 @@
                 const kickCycle = Math.sin(Date.now() * 0.02);
                 if(leftLegPivot) leftLegPivot.rotation.set(kickCycle * 0.3, 0, 0);
                 if(rightLegPivot) rightLegPivot.rotation.set(-kickCycle * 0.3, 0, 0);
-                
             } else {
                 if(torso) torso.rotation.set(0, 0, 0);
                 if(leftLegPivot) leftLegPivot.rotation.set(swingAngle, 0, 0);
@@ -899,6 +1010,12 @@
                 if(rightArmPivot) rightArmPivot.rotation.set(swingAngle * 0.9, 0, 0);
             }
         }
+
+        const scriptSandboxAPI = {
+            respawn: () => { respawnPlayer(); },
+            teleport: (x, y, z) => { localData.x = x; localData.y = y; localData.z = z; mobileTargetDestination = null; },
+            setSpeed: (boost) => { console.log("Speed modifier active."); }
+        };
 
         function animate() {
             requestAnimationFrame(animate);
@@ -912,7 +1029,7 @@
                 if (localData.sittingOn && currentRoomBlocks[localData.sittingOn]) {
                     const seat = currentRoomBlocks[localData.sittingOn];
                     localData.x = seat.x;
-                    localData.y = seat.y + (seat.sy/2 || 0.3) + 0.3;
+                    localData.y = seat.y + (seat.sy / 2) - 0.55; 
                     localData.z = seat.z;
                     localData.rotY = THREE.MathUtils.degToRad(seat.ry || 0);
                     velocityY = 0;
@@ -962,18 +1079,30 @@
                     let playerRadius = 0.4;
                     let playerHeight = 2.0;
                     let currentlyInWater = false;
+                    let touchingLadder = false;
 
                     blockDataArray.forEach(b => {
-                        if (!b.isWater) return;
-                        let withinX = localData.x >= b.x - b.w/2 && localData.x <= b.x + b.w/2;
-                        let withinY = localData.y + 1.0 >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
-                        let withinZ = localData.z >= b.z - b.d/2 && localData.z <= b.z + b.d/2;
-                        if (withinX && withinY && withinZ) currentlyInWater = true;
+                        let withinX = localData.x >= b.x - b.w/2 - 0.2 && localData.x <= b.x + b.w/2 + 0.2;
+                        let withinY = localData.y >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
+                        let withinZ = localData.z >= b.z - b.d/2 - 0.2 && localData.z <= b.z + b.d/2 + 0.2;
+                        
+                        if (withinX && withinY && withinZ) {
+                            if (b.isWater) currentlyInWater = true;
+                            if (b.isLadder) touchingLadder = true;
+                            
+                            if (b.executeTouch && Date.now() - b.lastExecutionTime > 1000) {
+                                b.lastExecutionTime = Date.now();
+                                try { b.executeTouch(scriptSandboxAPI); } catch(err) { console.error("Script Runtime Error:", err); }
+                            }
+                        }
                     });
                     
                     inWater = currentlyInWater;
                     localData.isSubmerged = inWater;
+                    isClimbing = touchingLadder && (keys['w'] || keys['s'] || keys['arrowup'] || keys['arrowdown'] || mobileTargetDestination !== null);
+                    
                     document.getElementById('water-status-indicator').style.display = inWater ? 'block' : 'none';
+                    document.getElementById('climb-status-indicator').style.display = touchingLadder ? 'block' : 'none';
 
                     if (isFlying || inWater) {
                         isGrounded = false;
@@ -982,6 +1111,15 @@
                         if (keys['shift']) nextY -= speed;
                         if (!keys[' '] && !keys['shift'] && inWater) nextY -= 0.01; 
 
+                        localData.x = nextX;
+                        localData.z = nextZ;
+                        localData.y = nextY;
+                    } else if (isClimbing) {
+                        isGrounded = false;
+                        velocityY = 0;
+                        if (keys['w'] || keys['arrowup']) nextY += 0.1;
+                        if (keys['s'] || keys['arrowdown']) nextY -= 0.1;
+                        
                         localData.x = nextX;
                         localData.z = nextZ;
                         localData.y = nextY;
@@ -1047,7 +1185,7 @@
                     }
                 }
 
-                localData.legSwing = (localData.isMoving && !isFlying) ? (inWater ? Math.sin(Date.now() * 0.008) * 0.4 : Math.sin(Date.now() * 0.014) * 0.65) : 0;
+                localData.legSwing = (localData.isMoving && !isFlying && !isClimbing) ? (inWater ? Math.sin(Date.now() * 0.008) * 0.4 : Math.sin(Date.now() * 0.014) * 0.65) : 0;
                 if(playerRef) set(playerRef, localData);
             }
 
@@ -1061,7 +1199,7 @@
             if (playerMeshes[playerId] && gameInitialized) {
                 playerMeshes[playerId].position.set(localData.x, localData.y, localData.z);
                 playerMeshes[playerId].rotation.y = localData.rotY;
-                updateLimbAnimations(playerMeshes[playerId], localData.isMoving, localData.legSwing, !!localData.sittingOn, localData.isSubmerged);
+                updateLimbAnimations(playerMeshes[playerId], localData.isMoving, localData.legSwing, !!localData.sittingOn, localData.isSubmerged, isClimbing);
 
                 const headNode = playerMeshes[playerId].getObjectByName("head");
                 const torsoNode = playerMeshes[playerId].getObjectByName("torso");
@@ -1093,12 +1231,12 @@
                 playerMeshes[id].position.y += (p.y - playerMeshes[id].position.y) * 0.3;
                 playerMeshes[id].position.z += (p.z - playerMeshes[id].position.z) * 0.3;
                 playerMeshes[id].rotation.y = p.rotY || 0;
-                updateLimbAnimations(playerMeshes[id], p.isMoving, p.legSwing || 0, !!p.sittingOn, p.isSubmerged);
+                updateLimbAnimations(playerMeshes[id], p.isMoving, p.legSwing || 0, !!p.sittingOn, p.isSubmerged, false);
             });
 
             const trackingTarget = playerMeshes[playerId];
             if(trackingTarget && gameInitialized) {
-                const headHeight = localData.sittingOn ? 2.05 : 2.45;
+                const headHeight = localData.sittingOn ? 1.45 : 2.45; 
                 const targetX = trackingTarget.position.x;
                 const targetY = trackingTarget.position.y + headHeight; 
                 const targetZ = trackingTarget.position.z;
