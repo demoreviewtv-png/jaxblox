@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>JaxBlox Engine - Mega Shape Sandbox & Physics Framework</title>
+    <title>JaxBlox Engine - Secure Sandbox & Mobile Framework</title>
     <style>
         body {
             margin: 0; padding: 0; overflow: hidden;
             background: #111; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            user-select: none; -webkit-user-select: none;
+            user-select: none; -webkit-user-select: none; touch-action: none;
         }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
@@ -103,7 +103,7 @@
     <div id="home-menu">
         <div id="home-card">
             <h1>JAXBLOX WORLD</h1>
-            <p>Roblox Simulation Sandbox Frame with Expanded Primitives Matrix</p>
+            <p>Secure Simulation Engine Sandbox Matrix with Protected Admin Layer</p>
             
             <input type="text" id="username-input" class="menu-input" placeholder="Enter Nickname..." maxlength="15">
             <div class="search-container">
@@ -234,7 +234,7 @@
         let activeRoomBlocksRef = null;
 
         let gameInitialized = false;
-        let isStudioMode = false;
+        let isStudioMode = false; // SECURE STATE FLAG
         let isFlying = false;
         let inWater = false;
         
@@ -254,6 +254,10 @@
         let isRightMouseDown = false, isLeftMouseDown = false;
         let isFirstPerson = false;
         
+        let mobileTargetDestination = null;
+        let mobileLookStartTouch = null;
+        let touchIndicatorRing = null;
+
         let spawnPoint = { x: 0, y: 1.5, z: 0 }; 
         let draggedAssetType = "";
         let base64MeshString = ""; 
@@ -276,6 +280,13 @@
         dirLight.position.set(10, 25, 15);
         scene.add(dirLight);
 
+        const ringGeom = new THREE.RingGeometry(0.3, 0.4, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00e1ff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+        touchIndicatorRing = new THREE.Mesh(ringGeom, ringMat);
+        touchIndicatorRing.rotation.x = Math.PI / 2;
+        touchIndicatorRing.visible = false;
+        scene.add(touchIndicatorRing);
+
         let playerMeshes = {};
         let blockMap = new Map(); 
         let blockDataArray = [];
@@ -289,6 +300,8 @@
             isGrounded = false;
             inWater = false;
             localData.isSubmerged = false;
+            mobileTargetDestination = null;
+            touchIndicatorRing.visible = false;
             document.getElementById('jumpout-seat-btn').style.display = 'none';
             document.getElementById('water-status-indicator').style.display = 'none';
             if(playerRef) set(playerRef, localData);
@@ -302,9 +315,14 @@
             document.getElementById('fly-status-indicator').style.display = state ? 'block' : 'none';
         };
 
-        window.setDragAsset = function(type) { draggedAssetType = type; base64MeshString = ""; };
+        window.setDragAsset = function(type) { 
+            if(!isStudioMode) return;
+            draggedAssetType = type; 
+            base64MeshString = ""; 
+        };
 
         document.getElementById('glb-uploader').addEventListener('change', function(e) {
+            if(!isStudioMode) return;
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -341,11 +359,12 @@
         });
 
         window.updateRoomGlobalConfig = function() {
-            if(!isStudioMode || !gameInitialized) return;
+            if(!isStudioMode || !gameInitialized) return alert("Operation Denied: Editor Session Not Active.");
             set(ref(db, `maps/${localData.room}/config/playersCollide`), document.getElementById('room-players-collide').checked);
         };
 
         window.updateSelectedProperty = function() {
+            if(!isStudioMode) return alert("Operation Denied: Editor Session Not Active.");
             if (!selectedBlockId || !activeRoomBlocksRef) return;
             const currentObj = currentRoomBlocks[selectedBlockId];
             if(!currentObj) return;
@@ -370,6 +389,7 @@
         };
 
         window.deleteSelectedPart = function() {
+            if(!isStudioMode) return alert("Operation Denied: Editor Session Not Active.");
             if (!selectedBlockId) return;
             remove(ref(db, `maps/${localData.room}/blocks/${selectedBlockId}`));
             closeInspector();
@@ -459,6 +479,7 @@
                 currentRoomBlocks = snap.val() || {};
                 
                 if(!mapExists || Object.keys(currentRoomBlocks).length === 0) {
+                    if(!isStudioMode) return; // Non-editors cannot initialize template defaults
                     const initialMapData = {};
                     const baseplateId = "block_baseplate_" + Math.random().toString(36).substr(2, 5);
                     const spawnId = "block_spawn_" + Math.random().toString(36).substr(2, 5);
@@ -506,6 +527,8 @@
             closeInspector();
             draggingBlockId = null;
             toggleFlightMode(false);
+            mobileTargetDestination = null;
+            touchIndicatorRing.visible = false;
             Object.keys(playerMeshes).forEach(id => scene.remove(playerMeshes[id]));
             playerMeshes = {};
             rebuildCustomMaps(); 
@@ -522,6 +545,7 @@
         };
 
         window.pasteMapOverrideJSON = async function() {
+            if(!isStudioMode) return alert("Operation Denied: Editor Session Not Active.");
             const rawPaste = prompt("Paste map JSON:");
             if (!rawPaste) return;
             try {
@@ -535,21 +559,20 @@
 
         function createWedgeGeometry() {
             const geom = new THREE.BufferGeometry();
-            // 6 vertices defining a right-angle triangular wedge block shape
             const vertices = new Float32Array([
-                -0.5, -0.5,  0.5,  // 0
-                 0.5, -0.5,  0.5,  // 1
-                -0.5, -0.5, -0.5,  // 2
-                 0.5, -0.5, -0.5,  // 3
-                -0.5,  0.5, -0.5,  // 4
-                 0.5,  0.5, -0.5   // 5
+                -0.5, -0.5,  0.5,
+                 0.5, -0.5,  0.5,
+                -0.5, -0.5, -0.5,
+                 0.5, -0.5, -0.5,
+                -0.5,  0.5, -0.5,
+                 0.5,  0.5, -0.5 
             ]);
             const indices = [
-                0, 2, 1,  1, 2, 3, // Bottom
-                4, 5, 0,  5, 1, 0, // Incline Slanted Front
-                2, 4, 3,  3, 4, 5, // Back vertical face
-                0, 4, 2,           // Left side profile triangle
-                1, 3, 5            // Right side profile triangle
+                0, 2, 1,  1, 2, 3,
+                4, 5, 0,  5, 1, 0,
+                2, 4, 3,  3, 4, 5,
+                0, 4, 2, 
+                1, 3, 5 
             ];
             geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
             geom.setIndex(indices);
@@ -568,26 +591,13 @@
                 
                 let geometry;
                 switch(b.type) {
-                    case 'sphere':
-                        geometry = new THREE.SphereGeometry(0.5, 24, 24);
-                        break;
-                    case 'wedge':
-                        geometry = createWedgeGeometry();
-                        break;
-                    case 'cylinder':
-                        geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 24);
-                        break;
-                    case 'capsule':
-                        geometry = new THREE.CapsuleGeometry(0.35, 0.5, 8, 16);
-                        break;
-                    case 'cone':
-                        geometry = new THREE.ConeGeometry(0.5, 1, 24);
-                        break;
-                    case 'torus':
-                        geometry = new THREE.TorusGeometry(0.4, 0.15, 12, 48);
-                        break;
-                    default:
-                        geometry = new THREE.BoxGeometry(1, 1, 1);
+                    case 'sphere': geometry = new THREE.SphereGeometry(0.5, 24, 24); break;
+                    case 'wedge': geometry = createWedgeGeometry(); break;
+                    case 'cylinder': geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 24); break;
+                    case 'capsule': geometry = new THREE.CapsuleGeometry(0.35, 0.5, 8, 16); break;
+                    case 'cone': geometry = new THREE.ConeGeometry(0.5, 1, 24); break;
+                    case 'torus': geometry = new THREE.TorusGeometry(0.4, 0.15, 12, 48); break;
+                    default: geometry = new THREE.BoxGeometry(1, 1, 1);
                 }
 
                 let material;
@@ -627,7 +637,7 @@
             if (e.button === 2) isRightMouseDown = false; 
             if (e.button === 0) {
                 isLeftMouseDown = false;
-                if (draggingBlockId && activeRoomBlocksRef) {
+                if (isStudioMode && draggingBlockId && activeRoomBlocksRef) {
                     const b = currentRoomBlocks[draggingBlockId];
                     if (b) {
                         set(ref(db, `maps/${localData.room}/blocks/${draggingBlockId}/x`), b.x);
@@ -668,17 +678,99 @@
             }
         });
 
+        window.addEventListener('touchstart', (e) => {
+            if (!gameInitialized) return;
+            const touch = e.changedTouches[0];
+            
+            if (isStudioMode && touch.clientX > window.innerWidth - 300) return;
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+
+            const mouse = new THREE.Vector2((touch.clientX/window.innerWidth)*2-1, -(touch.clientY/window.innerHeight)*2+1);
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersectables = Array.from(blockMap.values());
+            const intersects = raycaster.intersectObjects(intersectables, true);
+            
+            if (intersects.length > 0) {
+                let hitPoint = intersects[0].point;
+                if (!isStudioMode) {
+                    mobileTargetDestination = new THREE.Vector3(hitPoint.x, localData.y, hitPoint.z);
+                    touchIndicatorRing.position.set(hitPoint.x, hitPoint.y + 0.05, hitPoint.z);
+                    touchIndicatorRing.visible = true;
+                } else {
+                    let rootObj = intersects[0].object;
+                    while (rootObj.parent && !rootObj.userData.blockId && rootObj.parent !== scene) {
+                        rootObj = rootObj.parent;
+                    }
+                    const hitId = rootObj.userData.blockId;
+                    if (hitId) {
+                        openInspector(hitId, currentRoomBlocks[hitId]);
+                        draggingBlockId = hitId;
+                        return;
+                    }
+                }
+            }
+            
+            if (!draggingBlockId) {
+                mobileLookStartTouch = { x: touch.clientX, y: touch.clientY };
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!gameInitialized) return;
+            const touch = e.changedTouches[0];
+
+            if (isStudioMode && draggingBlockId) {
+                const mouse = new THREE.Vector2((touch.clientX/window.innerWidth)*2-1, -(touch.clientY/window.innerHeight)*2+1);
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, camera);
+                const currentObj = currentRoomBlocks[draggingBlockId];
+                if (currentObj) {
+                    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -currentObj.y);
+                    const target = new THREE.Vector3();
+                    if (raycaster.ray.intersectPlane(plane, target)) {
+                        currentObj.x = Math.round(target.x * 2) / 2;
+                        currentObj.z = Math.round(target.z * 2) / 2;
+                        const visualMesh = blockMap.get(draggingBlockId);
+                        if(visualMesh) { visualMesh.position.x = currentObj.x; visualMesh.position.z = currentObj.z; }
+                    }
+                }
+                return;
+            }
+
+            if (mobileLookStartTouch) {
+                const dx = touch.clientX - mobileLookStartTouch.x;
+                const dy = touch.clientY - mobileLookStartTouch.y;
+                
+                cameraYaw -= dx * 0.007;
+                cameraPitch = Math.max(-Math.PI/2.2, Math.min(Math.PI / 2.1, cameraPitch + dy * 0.007));
+                
+                mobileLookStartTouch = { x: touch.clientX, y: touch.clientY };
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            mobileLookStartTouch = null;
+            if (isStudioMode && draggingBlockId && activeRoomBlocksRef) {
+                const b = currentRoomBlocks[draggingBlockId];
+                if (b) {
+                    set(ref(db, `maps/${localData.room}/blocks/${draggingBlockId}/x`), b.x);
+                    set(ref(db, `maps/${localData.room}/blocks/${draggingBlockId}/z`), b.z);
+                }
+            }
+            draggingBlockId = null;
+        });
+
         window.addEventListener('pointerdown', (e) => {
-            if (!gameInitialized || e.button === 2) return;
+            if (!gameInitialized || e.button === 2 || e.pointerType === 'touch') return;
             if (e.clientX > window.innerWidth - 300 || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
 
             const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, camera);
 
-            const intersectables = [];
-            blockMap.forEach(mesh => intersectables.push(mesh));
-
+            const intersectables = Array.from(blockMap.values());
             const intersects = raycaster.intersectObjects(intersectables, true);
             if (intersects.length > 0) {
                 let rootObj = intersects[0].object;
@@ -712,31 +804,20 @@
             const mat = new THREE.MeshStandardMaterial({ color: colorHex });
             const skinMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
 
-            const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.5), mat);
-            torso.position.y = 1.6; 
-            torso.name = "torso";
-            group.add(torso);
-
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat);
-            head.position.y = 2.45;
-            head.name = "head";
-            group.add(head);
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.5), mat); torso.position.y = 1.6; torso.name = "torso"; group.add(torso);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat); head.position.y = 2.45; head.name = "head"; group.add(head);
 
             const leftArmPivot = new THREE.Group(); leftArmPivot.position.set(-0.7, 2.1, 0); leftArmPivot.name = "leftArmPivot";
-            const leftArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), mat); leftArmMesh.position.y = -0.5;
-            leftArmPivot.add(leftArmMesh); group.add(leftArmPivot);
+            const leftArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), mat); leftArmMesh.position.y = -0.5; leftArmPivot.add(leftArmMesh); group.add(leftArmPivot);
 
             const rightArmPivot = new THREE.Group(); rightArmPivot.position.set(0.7, 2.1, 0); rightArmPivot.name = "rightArmPivot";
-            const rightArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), mat); rightArmMesh.position.y = -0.5;
-            rightArmPivot.add(rightArmMesh); group.add(rightArmPivot);
+            const rightArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), mat); rightArmMesh.position.y = -0.5; rightArmPivot.add(rightArmMesh); group.add(rightArmPivot);
 
             const leftLegPivot = new THREE.Group(); leftLegPivot.position.set(-0.26, 1.0, 0); leftLegPivot.name = "leftLegPivot";
-            const leftLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.44, 1.0, 0.44), mat); leftLegMesh.position.y = -0.5;
-            leftLegPivot.add(leftLegMesh); group.add(leftLegPivot);
+            const leftLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.44, 1.0, 0.44), mat); leftLegMesh.position.y = -0.5; leftLegPivot.add(leftLegMesh); group.add(leftLegPivot);
 
             const rightLegPivot = new THREE.Group(); rightLegPivot.position.set(0.26, 1.0, 0); rightLegPivot.name = "rightLegPivot";
-            const rightLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.44, 1.0, 0.44), mat); rightLegMesh.position.y = -0.5;
-            rightLegPivot.add(rightLegMesh); group.add(rightLegPivot);
+            const rightLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.44, 1.0, 0.44), mat); rightLegMesh.position.y = -0.5; rightLegPivot.add(rightLegMesh); group.add(rightLegPivot);
 
             return group;
         }
@@ -755,9 +836,11 @@
             if(document.activeElement.tagName === 'INPUT') return;
             keys[e.key.toLowerCase()] = true;
             if(e.key === ' ' && localData.sittingOn) jumpOutSeat();
+            if(e.key.toLowerCase() === 'f' && isStudioMode) toggleFlightMode(!isFlying);
             
-            if(e.key.toLowerCase() === 'f' && isStudioMode) {
-                toggleFlightMode(!isFlying);
+            if(['w','a','s','d','arrowup','arrowleft','arrowdown','arrowright'].includes(e.key.toLowerCase())) {
+                mobileTargetDestination = null;
+                touchIndicatorRing.visible = false;
             }
         });
         window.addEventListener('keyup', e => {
@@ -785,6 +868,8 @@
                     velocityY = 0;
                     isGrounded = true;
                     localData.isMoving = false;
+                    mobileTargetDestination = null;
+                    touchIndicatorRing.visible = false;
                     document.getElementById('jumpout-seat-btn').style.display = 'block';
                 } else {
                     if (keys['w'] || keys['arrowup']) { moveX -= forwardX; moveZ -= forwardZ; }
@@ -795,7 +880,24 @@
                     let nextX = localData.x;
                     let nextZ = localData.z;
 
-                    if (moveX !== 0 || moveZ !== 0) {
+                    if (mobileTargetDestination && moveX === 0 && moveZ === 0) {
+                        let dx = mobileTargetDestination.x - localData.x;
+                        let dz = mobileTargetDestination.z - localData.z;
+                        let distanceToTarget = Math.sqrt(dx * dx + dz * dz);
+                        
+                        if (distanceToTarget > 0.2) {
+                            moveX = dx / distanceToTarget;
+                            moveZ = dz / distanceToTarget;
+                            nextX += moveX * speed;
+                            nextZ += moveZ * speed;
+                            localData.isMoving = true;
+                            localData.rotY = Math.atan2(-moveX, -moveZ);
+                        } else {
+                            mobileTargetDestination = null;
+                            touchIndicatorRing.visible = false;
+                            localData.isMoving = false;
+                        }
+                    } else if (moveX !== 0 || moveZ !== 0) {
                         let len = Math.sqrt(moveX * moveX + moveZ * moveZ);
                         nextX += (moveX / len) * speed; 
                         nextZ += (moveZ / len) * speed;
@@ -807,7 +909,6 @@
                     }
 
                     let nextY = localData.y;
-                    
                     let playerRadius = 0.4;
                     let playerHeight = 2.0;
                     let currentlyInWater = false;
@@ -829,10 +930,7 @@
                         velocityY = 0;
                         if (keys[' ']) nextY += speed;
                         if (keys['shift']) nextY -= speed;
-                        
-                        if (!keys[' '] && !keys['shift'] && inWater) {
-                            nextY -= 0.01; 
-                        }
+                        if (!keys[' '] && !keys['shift'] && inWater) nextY -= 0.01; 
 
                         localData.x = nextX;
                         localData.z = nextZ;
@@ -842,30 +940,25 @@
                         velocityY -= 0.009; 
                         nextY += velocityY;
 
-                        if (nextY < -25) {
-                            respawnPlayer();
-                            return; 
-                        }
+                        if (nextY < -25) { respawnPlayer(); return; }
 
-                        // X-Axis Collision
                         let xCollides = false;
                         blockDataArray.forEach(b => {
                             if (!b.canCollide) return;
                             let withinX = nextX + playerRadius >= b.x - b.w/2 && nextX - playerRadius <= b.x + b.w/2;
                             let withinY = localData.y + playerHeight >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
                             let withinZ = localData.z + playerRadius >= b.z - b.d/2 && localData.z - playerRadius <= b.z + b.d/2;
-                            if (withinX && withinY && withinZ) { xCollides = true; }
+                            if (withinX && withinY && withinZ) { xCollides = true; mobileTargetDestination = null; touchIndicatorRing.visible = false; }
                         });
                         if (!xCollides) localData.x = nextX;
 
-                        // Z-Axis Collision
                         let zCollides = false;
                         blockDataArray.forEach(b => {
                             if (!b.canCollide) return;
                             let withinX = localData.x + playerRadius >= b.x - b.w/2 && localData.x - playerRadius <= b.x + b.w/2;
                             let withinY = localData.y + playerHeight >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
                             let withinZ = nextZ + playerRadius >= b.z - b.d/2 && nextZ - playerRadius <= b.z + b.d/2;
-                            if (withinX && withinY && withinZ) { zCollides = true; }
+                            if (withinX && withinY && withinZ) { zCollides = true; mobileTargetDestination = null; touchIndicatorRing.visible = false; }
                         });
                         if (!zCollides) localData.z = nextZ;
 
@@ -873,10 +966,8 @@
                             Object.keys(remotePlayers).forEach(id => {
                                 if (id === playerId || remotePlayers[id].room !== localData.room) return;
                                 let rp = remotePlayers[id];
-                                let dx = localData.x - rp.x;
-                                let dz = localData.z - rp.z;
-                                let dist = Math.sqrt(dx*dx + dz*dz);
-                                let minDist = playerRadius * 2;
+                                let dx = localData.x - rp.x; let dz = localData.z - rp.z;
+                                let dist = Math.sqrt(dx*dx + dz*dz); let minDist = playerRadius * 2;
                                 if (dist < minDist && dist > 0.01) {
                                     let overlap = minDist - dist;
                                     localData.x += (dx / dist) * overlap * 0.5;
@@ -885,7 +976,6 @@
                             });
                         }
 
-                        // Y-Axis Floor Snap resolution loop
                         let groundHit = false;
                         blockDataArray.forEach(b => {
                             let withinX = localData.x + playerRadius >= b.x - b.w/2 && localData.x - playerRadius <= b.x + b.w/2;
@@ -954,11 +1044,9 @@
                 const headNode = playerMeshes[playerId].getObjectByName("head");
                 const torsoNode = playerMeshes[playerId].getObjectByName("torso");
                 if (isFirstPerson) {
-                    if(headNode) headNode.visible = false; 
-                    if(torsoNode) torsoNode.visible = false;
+                    if(headNode) headNode.visible = false; if(torsoNode) torsoNode.visible = false;
                 } else {
-                    if(headNode) headNode.visible = true;
-                    if(torsoNode) torsoNode.visible = true;
+                    if(headNode) headNode.visible = true; if(torsoNode) torsoNode.visible = true;
                 }
             }
 
