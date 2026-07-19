@@ -875,9 +875,13 @@
                         // Custom data URL builder handler or standard geometric shapes
                         if (b.type === 'glb' && b.meshData) {
                             mesh = new THREE.Group();
-                            gltfLoader.load(b.meshData, (gltf) => {
-                                mesh.add(gltf.scene);
-                            }, undefined, (err) => console.error("GLB Load failure: ", err));
+                            fetch(b.meshData)
+                                .then(res => res.arrayBuffer())
+                                .then(buffer => {
+                                    gltfLoader.parse(buffer, '', (gltf) => {
+                                        mesh.add(gltf.scene);
+                                    }, (err) => console.error("GLB Parse fail: ", err));
+                                }).catch(err => console.error("GLB ArrayBuffer fail: ", err));
                         } else if (b.type === 'anim_rig') {
                             mesh = createProceduralPlayerRig(b.color || "#ff00e1");
                         } else {
@@ -961,7 +965,7 @@
                     }
                     
                     pGroup.position.set(p.x, p.y - 0.9, p.z);
-                    pGroup.rotation.y = p.rotY || 0;
+                    pGroup.rotation.y = (p.rotY || 0) + Math.PI; // Face correct walking direction online
 
                     // Animate networked characters statefully
                     const t = performance.now() * 0.001;
@@ -1112,7 +1116,11 @@
             inWater = false; isClimbing = false;
             let currentSeat = null;
 
-            // Physics collision resolution layers
+            // Physics collision checking & resolution layers
+            const px = localData.x, py = localData.y, pz = localData.z;
+            const r = 0.4; 
+            let onSolidBlock = false;
+
             blockDataArray.forEach(b => {
                 if (hiddenBlocks[b.id]) return;
 
@@ -1120,13 +1128,19 @@
                 const minY = b.y - b.sy/2, maxY = b.y + b.sy/2;
                 const minZ = b.z - b.sz/2, maxZ = b.z + b.sz/2;
 
-                const px = localData.x, py = localData.y, pz = localData.z;
-                const r = 0.4; 
-
                 if (px + r > minX && px - r < maxX && py + 1.2 > minY && py - 0.2 < maxY && pz + r > minZ && pz - r < maxZ) {
                     if (b.type === 'water') inWater = true;
                     if (b.type === 'ladder') isClimbing = true;
                     if (b.type === 'seat' && !localData.sittingOn) currentSeat = b;
+
+                    // Solid Block resolution layer logic (Land on top of objects)
+                    if (b.canCollide !== false && b.type !== 'water' && b.type !== 'ladder' && b.type !== 'seat') {
+                        if (velocityY <= 0 && (py - velocityY * dt) >= maxY - 0.25) {
+                            localData.y = maxY + 0.2;
+                            velocityY = 0;
+                            onSolidBlock = true;
+                        }
+                    }
 
                     // Trigger block custom scripting layer handlers securely
                     if (b.code && b.code.trim().length > 0) {
@@ -1159,10 +1173,17 @@
 
             if (!localData.sittingOn) {
                 let moveX = 0, moveZ = 0;
-                if (keys['w'] || keys['arrowup']) { moveX += Math.sin(cameraYaw); moveZ += Math.cos(cameraYaw); }
-                if (keys['s'] || keys['arrowdown']) { moveX -= Math.sin(cameraYaw); moveZ -= Math.cos(cameraYaw); }
-                if (keys['a'] || keys['arrowleft']) { moveX += Math.cos(cameraYaw); moveZ -= Math.sin(cameraYaw); }
-                if (keys['d'] || keys['arrowright']) { moveX -= Math.cos(cameraYaw); moveZ += Math.sin(cameraYaw); }
+
+                // View-relative movement logic calculation vectors
+                const fX = -Math.sin(cameraYaw);
+                const fZ = -Math.cos(cameraYaw);
+                const rX = -Math.cos(cameraYaw);
+                const rZ = Math.sin(cameraYaw);
+
+                if (keys['w'] || keys['arrowup']) { moveX += fX; moveZ += fZ; }
+                if (keys['s'] || keys['arrowdown']) { moveX -= fX; moveZ -= fZ; }
+                if (keys['a'] || keys['arrowleft']) { moveX -= rX; moveZ -= rZ; }
+                if (keys['d'] || keys['arrowright']) { moveX += rX; moveZ += rZ; }
 
                 const len = Math.sqrt(moveX*moveX + moveZ*moveZ);
                 if (len > 0) {
@@ -1188,23 +1209,26 @@
                     if (keys[' ']) localData.y += 3.5 * dt;
                     if (keys['shift']) localData.y -= 3.5 * dt;
                     
-                    // Simple water drag application
                     localData.y -= 0.5 * dt; 
                     if(localData.y < 0) localData.y = 0; 
                 } else {
-                    // Regular Gravity Simulation layers
-                    velocityY -= 9.81 * 2.2 * dt;
-                    localData.y += velocityY * dt;
-
-                    if (localData.y <= 0.9) {
-                        localData.y = 0.9; velocityY = 0; isGrounded = true;
+                    if (onSolidBlock) {
+                        isGrounded = true;
                     } else {
-                        isGrounded = false;
-                        localData.state = "airborne";
+                        // Regular Gravity Simulation layers
+                        velocityY -= 9.81 * 2.2 * dt;
+                        localData.y += velocityY * dt;
+
+                        if (localData.y <= 0.9) {
+                            localData.y = 0.9; velocityY = 0; isGrounded = true;
+                        } else {
+                            isGrounded = false;
+                            localData.state = "airborne";
+                        }
                     }
 
                     if (keys[' '] && isGrounded) {
-                        velocityY = 11.5; isGrounded = false;
+                        velocityY = 11.5; isGrounded = false; onSolidBlock = false;
                     }
                 }
             }
@@ -1214,7 +1238,7 @@
 
             // Sync visual representation transform coordinates
             localVisualModel.position.set(localData.x, localData.y - 0.9, localData.z);
-            localVisualModel.rotation.y = cameraYaw;
+            localVisualModel.rotation.y = cameraYaw + Math.PI; // Correct model facing orientation direction
 
             // Handle Camera Viewport Clipping & Positioning Matrices
             isFirstPerson = (cameraZoomDistance <= 0.8);
