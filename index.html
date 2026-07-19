@@ -234,7 +234,7 @@
         let activeRoomBlocksRef = null;
 
         let gameInitialized = false;
-        let isStudioMode = false; // SECURE STATE FLAG
+        let isStudioMode = false; 
         let isFlying = false;
         let inWater = false;
         
@@ -479,7 +479,7 @@
                 currentRoomBlocks = snap.val() || {};
                 
                 if(!mapExists || Object.keys(currentRoomBlocks).length === 0) {
-                    if(!isStudioMode) return; // Non-editors cannot initialize template defaults
+                    if(!isStudioMode) return; 
                     const initialMapData = {};
                     const baseplateId = "block_baseplate_" + Math.random().toString(36).substr(2, 5);
                     const spawnId = "block_spawn_" + Math.random().toString(36).substr(2, 5);
@@ -560,20 +560,23 @@
         function createWedgeGeometry() {
             const geom = new THREE.BufferGeometry();
             const vertices = new Float32Array([
-                -0.5, -0.5,  0.5,
-                 0.5, -0.5,  0.5,
-                -0.5, -0.5, -0.5,
-                 0.5, -0.5, -0.5,
-                -0.5,  0.5, -0.5,
-                 0.5,  0.5, -0.5 
+                -0.5, -0.5,  0.5, // 0: Front bottom left
+                 0.5, -0.5,  0.5, // 1: Front bottom right
+                -0.5, -0.5, -0.5, // 2: Back bottom left
+                 0.5, -0.5, -0.5, // 3: Back bottom right
+                -0.5,  0.5, -0.5, // 4: Back top left
+                 0.5,  0.5, -0.5  // 5: Back top right
             ]);
+
+            // Corrected vertex counter-clockwise winding order maps
             const indices = [
-                0, 2, 1,  1, 2, 3,
-                4, 5, 0,  5, 1, 0,
-                2, 4, 3,  3, 4, 5,
-                0, 4, 2, 
-                1, 3, 5 
+                0, 1, 2,  1, 3, 2, // Bottom Face
+                0, 4, 1,  1, 4, 5, // Sloped Front Face
+                2, 3, 4,  3, 5, 4, // Vertical Back Face
+                0, 2, 4,           // Left Side Face
+                1, 5, 3            // Right Side Face
             ];
+
             geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
             geom.setIndex(indices);
             geom.computeVertexNormals();
@@ -850,6 +853,48 @@
         
         onValue(ref(db, 'players'), snap => { if(gameInitialized) remotePlayers = snap.val() || {}; });
 
+        function updateLimbAnimations(meshGroup, isMoving, swingAngle, isSitting, isSubmerged) {
+            const leftLegPivot = meshGroup.getObjectByName("leftLegPivot");
+            const rightLegPivot = meshGroup.getObjectByName("rightLegPivot");
+            const leftArmPivot = meshGroup.getObjectByName("leftArmPivot");
+            const rightArmPivot = meshGroup.getObjectByName("rightArmPivot");
+            const torso = meshGroup.getObjectByName("torso");
+
+            if (isSitting) {
+                if(torso) torso.rotation.set(0, 0, 0);
+                if(leftLegPivot) leftLegPivot.rotation.set(-Math.PI / 2, 0, 0);
+                if(rightLegPivot) rightLegPivot.rotation.set(-Math.PI / 2, 0, 0);
+                if(leftArmPivot) leftArmPivot.rotation.set(-Math.PI / 5, 0, 0);
+                if(rightArmPivot) rightArmPivot.rotation.set(-Math.PI / 5, 0, 0);
+            } else if (isSubmerged) {
+                if(torso) torso.rotation.set(Math.PI / 3.5, 0, 0);
+                
+                const time = Date.now() * 0.008;
+                const armCycleLeft = Math.sin(time);
+                const armCycleRight = Math.sin(time + Math.PI);
+                
+                if(leftArmPivot) {
+                    leftArmPivot.rotation.x = Math.PI / 2 + armCycleLeft * 0.8;
+                    leftArmPivot.rotation.z = Math.max(0, -Math.cos(time) * 0.4); 
+                }
+                if(rightArmPivot) {
+                    rightArmPivot.rotation.x = Math.PI / 2 + armCycleRight * 0.8;
+                    rightArmPivot.rotation.z = Math.min(0, Math.cos(time + Math.PI) * 0.4);
+                }
+                
+                const kickCycle = Math.sin(Date.now() * 0.02);
+                if(leftLegPivot) leftLegPivot.rotation.set(kickCycle * 0.3, 0, 0);
+                if(rightLegPivot) rightLegPivot.rotation.set(-kickCycle * 0.3, 0, 0);
+                
+            } else {
+                if(torso) torso.rotation.set(0, 0, 0);
+                if(leftLegPivot) leftLegPivot.rotation.set(swingAngle, 0, 0);
+                if(rightLegPivot) rightLegPivot.rotation.set(-swingAngle, 0, 0);
+                if(leftArmPivot) leftArmPivot.rotation.set(-swingAngle * 0.9, 0, 0);
+                if(rightArmPivot) rightArmPivot.rotation.set(swingAngle * 0.9, 0, 0);
+            }
+        }
+
         function animate() {
             requestAnimationFrame(animate);
 
@@ -1006,34 +1051,6 @@
                 group.add(createPlayerModel(localData.color)); 
                 group.add(createNameTag(localData.username + " (You)"));
                 playerMeshes[playerId] = group; scene.add(group);
-            }
-            
-            function updateLimbAnimations(meshGroup, isMoving, swingAngle, isSitting, isSubmerged) {
-                const leftLegPivot = meshGroup.getObjectByName("leftLegPivot");
-                const rightLegPivot = meshGroup.getObjectByName("rightLegPivot");
-                const leftArmPivot = meshGroup.getObjectByName("leftArmPivot");
-                const rightArmPivot = meshGroup.getObjectByName("rightArmPivot");
-                const torso = meshGroup.getObjectByName("torso");
-
-                if (isSitting) {
-                    if(torso) torso.rotation.x = 0;
-                    if(leftLegPivot) leftLegPivot.rotation.set(-Math.PI / 2, 0, 0);
-                    if(rightLegPivot) rightLegPivot.rotation.set(-Math.PI / 2, 0, 0);
-                    if(leftArmPivot) leftArmPivot.rotation.set(-Math.PI / 5, 0, 0);
-                    if(rightArmPivot) rightArmPivot.rotation.set(-Math.PI / 5, 0, 0);
-                } else if (isSubmerged) {
-                    if(torso) torso.rotation.x = Math.PI / 4;
-                    if(leftLegPivot) leftLegPivot.rotation.set(swingAngle, 0, 0);
-                    if(rightLegPivot) rightLegPivot.rotation.set(-swingAngle, 0, 0);
-                    if(leftArmPivot) leftArmPivot.rotation.set(Math.PI/2 + swingAngle, 0, 0);
-                    if(rightArmPivot) rightArmPivot.rotation.set(Math.PI/2 - swingAngle, 0, 0);
-                } else {
-                    if(torso) torso.rotation.x = 0;
-                    if(leftLegPivot) leftLegPivot.rotation.set(swingAngle, 0, 0);
-                    if(rightLegPivot) rightLegPivot.rotation.set(-swingAngle, 0, 0);
-                    if(leftArmPivot) leftArmPivot.rotation.set(-swingAngle * 0.9, 0, 0);
-                    if(rightArmPivot) rightArmPivot.rotation.set(swingAngle * 0.9, 0, 0);
-                }
             }
 
             if (playerMeshes[playerId] && gameInitialized) {
