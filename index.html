@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>JaxBlox Engine - Flight, Water & Respawn Framework</title>
+    <title>JaxBlox Engine - Mega Shape Sandbox & Physics Framework</title>
     <style>
         body {
             margin: 0; padding: 0; overflow: hidden;
@@ -66,13 +66,13 @@
             color: #ddd; display: none; flex-direction: column;
             box-shadow: -5px 0 15px rgba(0,0,0,0.5); font-size: 0.85rem;
         }
-        .sidebar-section { border-bottom: 1px solid #333; padding: 15px; }
-        .sidebar-title { color: #00e1ff; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sidebar-section { border-bottom: 1px solid #333; padding: 12px; }
+        .sidebar-title { color: #00e1ff; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 5px; }
+        .asset-tray { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 5px; max-height: 200px; overflow-y: auto; padding-right: 2px; }
         .tray-item {
             background: #2a2a2a; border: 1px dashed #555; border-radius: 6px;
-            padding: 10px; text-align: center; cursor: grab; color: #fff; font-weight: bold;
+            padding: 8px; text-align: center; cursor: grab; color: #fff; font-weight: bold; font-size: 0.75rem;
         }
         .tray-item:active { cursor: grabbing; background: #333; }
         
@@ -103,7 +103,7 @@
     <div id="home-menu">
         <div id="home-card">
             <h1>JAXBLOX WORLD</h1>
-            <p>Roblox Simulation Engine with Liquid Buoyancy Physics</p>
+            <p>Roblox Simulation Sandbox Frame with Expanded Primitives Matrix</p>
             
             <input type="text" id="username-input" class="menu-input" placeholder="Enter Nickname..." maxlength="15">
             <div class="search-container">
@@ -143,8 +143,13 @@
             <div class="asset-tray">
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('brick')">🧱 Brick</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('sphere')">🔮 Sphere</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('wedge')">📐 Wedge</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('cylinder')">📦 Cylinder</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('capsule')">💎 Capsule</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('cone')">📐 Cone</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('torus')">🪐 Torus</div>
                 <div class="tray-item" draggable="true" ondragstart="setDragAsset('water')" style="border-color:#3399ff; color:#3399ff;">🌊 Water</div>
-                <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500;">💺 Seat</div>
+                <div class="tray-item" draggable="true" ondragstart="setDragAsset('seat')" style="border-color:#ff9500; color:#ff9500; grid-column: span 2;">💺 Seat</div>
             </div>
             <div style="margin-top:8px;">
                 <label style="display:block; font-size:11px; color:#aaa; margin-bottom:4px;">Upload Custom Mesh (.glb):</label>
@@ -236,7 +241,7 @@
         let globalRoomConfig = { playersCollide: false };
         let localData = { 
             id: playerId, username: "Guest",
-            x: 0, y: 5, z: 0, rotY: 0, color: Math.random() * 0xffffff, room: 'lobby',
+            x: 0, y: 3, z: 0, rotY: 0, color: Math.random() * 0xffffff, room: 'lobby',
             sittingOn: "", legSwing: 0, isMoving: false, isSubmerged: false
         };
         
@@ -249,7 +254,7 @@
         let isRightMouseDown = false, isLeftMouseDown = false;
         let isFirstPerson = false;
         
-        let spawnPoint = { x: 0, y: 5, z: 0 }; 
+        let spawnPoint = { x: 0, y: 1.5, z: 0 }; 
         let draggedAssetType = "";
         let base64MeshString = ""; 
 
@@ -277,7 +282,7 @@
 
         function respawnPlayer() {
             localData.x = spawnPoint.x;
-            localData.y = spawnPoint.y + 2; 
+            localData.y = spawnPoint.y + 1.5; 
             localData.z = spawnPoint.z;
             localData.sittingOn = "";
             velocityY = 0;
@@ -292,7 +297,7 @@
         window.toggleFlightMode = function(state) {
             if(!isStudioMode) return;
             isFlying = state;
-            velocityY = 0;
+            velocityY = 0; 
             document.getElementById('studio-fly-toggle').checked = state;
             document.getElementById('fly-status-indicator').style.display = state ? 'block' : 'none';
         };
@@ -322,12 +327,12 @@
                 push(activeRoomBlocksRef, {
                     type: draggedAssetType,
                     x: Math.round(target.x), y: Math.round(localData.y), z: Math.round(target.z),
-                    sx: draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:3), 
+                    sx: draggedAssetType==='brick'?2:(draggedAssetType==='seat'?1.6:2), 
                     sy: draggedAssetType==='seat'?0.6:2, 
-                    sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:3),
+                    sz: draggedAssetType==='brick'?1:(draggedAssetType==='seat'?1.6:2),
                     rx: 0, ry: 0, rz: 0,
                     color: draggedAssetType==='seat'?"#ff9500":(draggedAssetType==='water'?"#3399ff":"#00e1ff"), 
-                    canCollide: (draggedAssetType !== 'water'), // Water shouldn't collide solid by default
+                    canCollide: (draggedAssetType !== 'water'),
                     isSpawn: false,
                     meshData: base64MeshString || ""
                 });
@@ -450,7 +455,27 @@
 
             activeRoomBlocksRef = ref(db, `maps/${localData.room}/blocks`);
             onValue(activeRoomBlocksRef, (snap) => {
+                const mapExists = snap.exists();
                 currentRoomBlocks = snap.val() || {};
+                
+                if(!mapExists || Object.keys(currentRoomBlocks).length === 0) {
+                    const initialMapData = {};
+                    const baseplateId = "block_baseplate_" + Math.random().toString(36).substr(2, 5);
+                    const spawnId = "block_spawn_" + Math.random().toString(36).substr(2, 5);
+                    
+                    initialMapData[baseplateId] = {
+                        type: "brick", x: 0, y: 0, z: 0, sx: 100, sy: 1, sz: 100,
+                        rx: 0, ry: 0, rz: 0, color: "#666666", canCollide: true, isSpawn: false
+                    };
+                    initialMapData[spawnId] = {
+                        type: "brick", x: 0, y: 1, z: 0, sx: 4, sy: 1, sz: 4,
+                        rx: 0, ry: 0, rz: 0, color: "#ffd700", canCollide: true, isSpawn: true
+                    };
+                    
+                    set(activeRoomBlocksRef, initialMapData);
+                    return; 
+                }
+
                 const keys = Object.keys(currentRoomBlocks);
                 let foundSpawn = false;
                 for(let i=0; i<keys.length; i++) {
@@ -462,7 +487,7 @@
                         break;
                     }
                 }
-                if(!foundSpawn) spawnPoint = { x: 0, y: 5, z: 0 };
+                if(!foundSpawn) spawnPoint = { x: 0, y: 1.5, z: 0 };
 
                 rebuildCustomMaps();
                 if (selectedBlockId && currentRoomBlocks[selectedBlockId]) {
@@ -508,6 +533,30 @@
             } catch (err) { alert("Parsing Exception Encountered."); }
         };
 
+        function createWedgeGeometry() {
+            const geom = new THREE.BufferGeometry();
+            // 6 vertices defining a right-angle triangular wedge block shape
+            const vertices = new Float32Array([
+                -0.5, -0.5,  0.5,  // 0
+                 0.5, -0.5,  0.5,  // 1
+                -0.5, -0.5, -0.5,  // 2
+                 0.5, -0.5, -0.5,  // 3
+                -0.5,  0.5, -0.5,  // 4
+                 0.5,  0.5, -0.5   // 5
+            ]);
+            const indices = [
+                0, 2, 1,  1, 2, 3, // Bottom
+                4, 5, 0,  5, 1, 0, // Incline Slanted Front
+                2, 4, 3,  3, 4, 5, // Back vertical face
+                0, 4, 2,           // Left side profile triangle
+                1, 3, 5            // Right side profile triangle
+            ];
+            geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            geom.setIndex(indices);
+            geom.computeVertexNormals();
+            return geom;
+        }
+
         function rebuildCustomMaps() {
             blockMap.forEach(mesh => scene.remove(mesh));
             blockMap.clear();
@@ -518,12 +567,27 @@
                 const colorHex = b.isSpawn ? 0xffd700 : (b.color || 0x00e1ff);
                 
                 let geometry;
-                if (b.type === 'sphere') {
-                    geometry = new THREE.SphereGeometry(0.5, 32, 32);
-                } else if (b.type === 'torus') {
-                    geometry = new THREE.TorusGeometry(0.4, 0.15, 16, 64);
-                } else { 
-                    geometry = new THREE.BoxGeometry(1, 1, 1);
+                switch(b.type) {
+                    case 'sphere':
+                        geometry = new THREE.SphereGeometry(0.5, 24, 24);
+                        break;
+                    case 'wedge':
+                        geometry = createWedgeGeometry();
+                        break;
+                    case 'cylinder':
+                        geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 24);
+                        break;
+                    case 'capsule':
+                        geometry = new THREE.CapsuleGeometry(0.35, 0.5, 8, 16);
+                        break;
+                    case 'cone':
+                        geometry = new THREE.ConeGeometry(0.5, 1, 24);
+                        break;
+                    case 'torus':
+                        geometry = new THREE.TorusGeometry(0.4, 0.15, 12, 48);
+                        break;
+                    default:
+                        geometry = new THREE.BoxGeometry(1, 1, 1);
                 }
 
                 let material;
@@ -744,7 +808,6 @@
 
                     let nextY = localData.y;
                     
-                    // Pre-check if player is inside any Water volumes
                     let playerRadius = 0.4;
                     let playerHeight = 2.0;
                     let currentlyInWater = false;
@@ -752,7 +815,7 @@
                     blockDataArray.forEach(b => {
                         if (!b.isWater) return;
                         let withinX = localData.x >= b.x - b.w/2 && localData.x <= b.x + b.w/2;
-                        let withinY = localData.y + 1.0 >= b.y - b.h/2 && localData.y <= b.y + b.h/2; // check torso line
+                        let withinY = localData.y + 1.0 >= b.y - b.h/2 && localData.y <= b.y + b.h/2;
                         let withinZ = localData.z >= b.z - b.d/2 && localData.z <= b.z + b.d/2;
                         if (withinX && withinY && withinZ) currentlyInWater = true;
                     });
@@ -767,16 +830,14 @@
                         if (keys[' ']) nextY += speed;
                         if (keys['shift']) nextY -= speed;
                         
-                        // Apply fluid buoyancy damping if just drifting
                         if (!keys[' '] && !keys['shift'] && inWater) {
-                            nextY -= 0.01; // slow natural sinking
+                            nextY -= 0.01; 
                         }
 
                         localData.x = nextX;
                         localData.z = nextZ;
                         localData.y = nextY;
                     } else {
-                        // Standard physical gravity calculation
                         if (keys[' '] && isGrounded) { velocityY = 0.2; isGrounded = false; }
                         velocityY -= 0.009; 
                         nextY += velocityY;
@@ -808,7 +869,6 @@
                         });
                         if (!zCollides) localData.z = nextZ;
 
-                        // Mutual Player Pushback Collision Matrix
                         if (globalRoomConfig.playersCollide) {
                             Object.keys(remotePlayers).forEach(id => {
                                 if (id === playerId || remotePlayers[id].room !== localData.room) return;
@@ -872,7 +932,6 @@
                     if(leftArmPivot) leftArmPivot.rotation.set(-Math.PI / 5, 0, 0);
                     if(rightArmPivot) rightArmPivot.rotation.set(-Math.PI / 5, 0, 0);
                 } else if (isSubmerged) {
-                    // Tilted crawl animation style for swimming inside water
                     if(torso) torso.rotation.x = Math.PI / 4;
                     if(leftLegPivot) leftLegPivot.rotation.set(swingAngle, 0, 0);
                     if(rightLegPivot) rightLegPivot.rotation.set(-swingAngle, 0, 0);
